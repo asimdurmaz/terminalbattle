@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Terminal Battle — Multiplayer</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=VT323&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body,#root{height:100%}
+  @keyframes blink  {0%,100%{opacity:1}50%{opacity:0}}
+  @keyframes mpulse {0%,100%{box-shadow:0 0 6px #3b82f618}50%{box-shadow:0 0 16px #3b82f640}}
+  @keyframes rpulse {0%,100%{background:#000080}50%{background:#0000aa}}
+  @keyframes shake  {0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+  @keyframes mglow  {0%,100%{text-shadow:0 0 10px #00ff41}50%{text-shadow:0 0 20px #00ff41,0 0 40px #00ff4180}}
+  @keyframes flash  {0%,100%{opacity:1}50%{opacity:0.35}}
+  @keyframes spin   {to{transform:rotate(360deg)}}
+  @keyframes cdpop  {0%{transform:scale(0.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+  @keyframes goshow {0%{transform:scale(0.7) translateY(10px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+  @keyframes spulse  {0%,100%{opacity:1}50%{opacity:0.6}}
+  @keyframes opflash {0%{box-shadow:0 0 0 transparent}30%{box-shadow:0 0 28px 6px #f43f5e80,inset 0 0 20px #f43f5e18}100%{box-shadow:0 0 0 transparent}}
+  @keyframes glitch1  {0%,100%{clip-path:inset(0 0 98% 0);transform:translate(-3px,0)}20%{clip-path:inset(20% 0 60% 0);transform:translate(3px,0)}40%{clip-path:inset(55% 0 30% 0);transform:translate(-2px,0)}60%{clip-path:inset(75% 0 5% 0);transform:translate(2px,0)}80%{clip-path:inset(40% 0 50% 0);transform:translate(-3px,0)}}
+  @keyframes glitch2  {0%,100%{clip-path:inset(0 0 96% 0);transform:translate(3px,0);opacity:0.6}25%{clip-path:inset(35% 0 48% 0);transform:translate(-3px,0)}50%{clip-path:inset(65% 0 22% 0);transform:translate(2px,0)}75%{clip-path:inset(10% 0 78% 0);transform:translate(-2px,0)}}
+  @keyframes goentry  {0%{opacity:0;transform:scale(0.88) translateY(18px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+  @keyframes victpulse{0%,100%{text-shadow:0 0 30px currentColor}50%{text-shadow:0 0 60px currentColor,0 0 80px currentColor}}
+  @keyframes fall     {0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(105vh) rotate(720deg)}}
+  ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:#000}::-webkit-scrollbar-thumb{background:#1a3a1a}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useCallback,useEffect} = React;
+
+/* ── GENERATORS ── */
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+const FILE_NAMES=["report","config","data","notes","readme","log","index","payload","archive","export","manifest","session","cache","output","dump","record","snapshot","patch"];
+const FILE_EXTS=[".txt",".log",".dat",".cfg",".json",".csv",".md",".xml",".bak",".tmp"];
+const DIR_NAMES=["docs","backup","projects","archive","downloads","src","build","temp","logs","data","dist","assets","releases","staging","output"];
+const PROCESSES=["chrome","firefox","notepad","python3","node","slack","vlc","steam","discord","spotify","java","nginx","apache2"];
+const DOMAINS=["google.com","github.com","cloudflare.com","amazon.com","microsoft.com","stackoverflow.com","reddit.com","twitter.com"];
+const LOG_FILES=["syslog.txt","app.log","error.log","server.log","access.log","debug.log","system.log"];
+const KEYWORDS=["error","warning","timeout","failed","null","exception","critical","denied","refused","panic"];
+const rFile=()=>pick(FILE_NAMES)+pick(FILE_EXTS);
+const rDir=()=>pick(DIR_NAMES);
+const rProc=()=>pick(PROCESSES);
+const rDomain=()=>pick(DOMAINS);
+const rLog=()=>pick(LOG_FILES);
+const rKey=()=>pick(KEYWORDS);
+
+const TASK_POOL=[
+  {tier:1,fn:()=>({desc:"List all files in the folder",win:"dir",lin:"ls",winOut:"Desktop/\nnotes.txt\nbackup.dat",linOut:"d  0 docs\n-  17 welcome.txt"})},
+  {tier:1,fn:()=>({desc:"Show the current date and time",win:"date",lin:"date",winOut:"Thu Jan 08 2026 03:11:22 GMT+0200",linOut:"Thu Jan  8 03:11:22 GMT+0200 2026"})},
+  {tier:1,fn:()=>({desc:"Print the current working directory",win:"cd",lin:"pwd",winOut:"C:\\Users\\Player",linOut:"/home/player"})},
+  {tier:1,fn:()=>({desc:"Clear the terminal screen",win:"cls",lin:"clear",winOut:"__CLEAR__",linOut:"__CLEAR__"})},
+  {tier:1,fn:()=>({desc:"Show who is currently logged in",win:"whoami",lin:"whoami",winOut:"DESKTOP-PC\\Player",linOut:"player"})},
+  {tier:1,fn:()=>({desc:"Show the computer's hostname",win:"hostname",lin:"hostname",winOut:"BATTLESTATION-7",linOut:"player-machine"})},
+  {tier:1,fn:()=>{const f=rFile();return{desc:`Create a new empty file '${f}'`,win:`echo > ${f}`,lin:`touch ${f}`,winOut:"",linOut:""}}},
+  {tier:1,fn:()=>{const f=rFile();return{desc:`Delete the file '${f}'`,win:`del ${f}`,lin:`rm ${f}`,winOut:"",linOut:""}}},
+  {tier:1,fn:()=>{const d=rDir();return{desc:`Create a new directory '${d}'`,win:`mkdir ${d}`,lin:`mkdir ${d}`,winOut:"",linOut:""}}},
+  {tier:1,fn:()=>({desc:"Navigate up to the parent directory",win:"cd ..",lin:"cd ..",winOut:"",linOut:""})},
+  {tier:2,fn:()=>{const f=rFile();return{desc:`Read the contents of '${f}'`,win:`type ${f}`,lin:`cat ${f}`,winOut:"# file contents\nhello world\nend of file",linOut:"# file contents\nhello world\nend of file"}}},
+  {tier:2,fn:()=>{const a=rFile(),b=rFile();return{desc:`Rename '${a}' to '${b}'`,win:`ren ${a} ${b}`,lin:`mv ${a} ${b}`,winOut:"",linOut:""}}},
+  {tier:2,fn:()=>{const f=rFile(),d=rDir();return{desc:`Copy '${f}' into '${d}/'`,win:`copy ${f} ${d}/`,lin:`cp ${f} ${d}/`,winOut:"        1 file(s) copied.",linOut:""}}},
+  {tier:2,fn:()=>{const f=rFile(),d=rDir();return{desc:`Move '${f}' into '${d}/'`,win:`move ${f} ${d}/`,lin:`mv ${f} ${d}/`,winOut:"        1 file(s) moved.",linOut:""}}},
+  {tier:2,fn:()=>{const f=rFile();return{desc:`Append a line of text to '${f}'`,win:`echo more >> ${f}`,lin:`echo more >> ${f}`,winOut:"",linOut:""}}},
+  {tier:2,fn:()=>{const d=rDir();return{desc:`Force-delete directory '${d}' and all contents`,win:`rmdir /s /q ${d}`,lin:`rm -rf ${d}`,winOut:"",linOut:""}}},
+  {tier:2,fn:()=>({desc:"List all running processes",win:"tasklist",lin:"ps aux",winOut:"System     4  Services  0K\nchrome.exe  9832  Console  148K",linOut:"root    1  0.0  bash\nplayer  1234  1.2  chrome"})},
+  {tier:2,fn:()=>({desc:"List all environment variables",win:"set",lin:"printenv",winOut:"PATH=C:\\Windows\\system32\nOS=Windows_NT\nUSERNAME=Player",linOut:"PATH=/usr/local/bin\nSHELL=/bin/bash\nUSER=player"})},
+  {tier:2,fn:()=>{const dom=rDomain();return{desc:`Ping ${dom} to check connectivity`,win:`ping ${dom}`,lin:`ping ${dom}`,winOut:`Pinging ${dom}\nReply from ${dom}: bytes=32 time=14ms`,linOut:`PING ${dom}: 56 data bytes\n64 bytes from ${dom}: time=14.2 ms`}}},
+  {tier:3,fn:()=>{const kw=rKey(),lf=rLog();return{desc:`Search '${lf}' for the string '${kw}'`,win:`findstr "${kw}" ${lf}`,lin:`grep "${kw}" ${lf}`,winOut:`[WARN] 02:51 ${kw} in module init\n[ERR]  02:52 ${kw} detected`,linOut:`02:51 ${kw} in module init\n02:52 ${kw} detected`}}},
+  {tier:3,fn:()=>{const f1=rFile(),f2=rFile();return{desc:`Compare '${f1}' and '${f2}' for differences`,win:`fc ${f1} ${f2}`,lin:`diff ${f1} ${f2}`,winOut:`Comparing files ${f1} and ${f2}\nFC: no differences encountered`,linOut:`1c1\n< content of ${f1}\n---\n> content of ${f2}`}}},
+  {tier:3,fn:()=>{const p=rProc();return{desc:`Kill the running process '${p}'`,win:`taskkill /IM ${p}.exe`,lin:`pkill ${p}`,winOut:`SUCCESS: The process "${p}.exe" has been terminated.`,linOut:""}}},
+  {tier:3,fn:()=>{const ip=`192.168.${Math.floor(Math.random()*5)+1}.${Math.floor(Math.random()*200)+10}`;return{desc:"Show IP address and network config",win:"ipconfig",lin:"ip addr",winOut:`Ethernet adapter:\n  IPv4 Address: ${ip}\n  Subnet Mask:  255.255.0.0`,linOut:`2: eth0: <BROADCAST,UP>\n    inet ${ip}/24`}}},
+  {tier:3,fn:()=>({desc:"Show all active network connections",win:"netstat -an",lin:"ss -an",winOut:"Proto  Local Address    State\nTCP    0.0.0.0:80   LISTENING\nTCP    0.0.0.0:443  LISTENING",linOut:"State   Recv-Q  Local Address\nLISTEN  0       0.0.0.0:80\nLISTEN  0       0.0.0.0:443"})},
+  {tier:3,fn:()=>({desc:"Check total disk space usage",win:"dir /s",lin:"df -h",winOut:"Total Files Listed:\n  47 File(s)  2,284,891,136 bytes\n   4 Dir(s)  52,428,800,000 bytes free",linOut:"Filesystem   Size  Used Avail\n/dev/sda1     50G   14G   34G"})},
+  {tier:3,fn:()=>({desc:"Find where the 'git' executable lives",win:"where git",lin:"which git",winOut:"C:\\Program Files\\Git\\cmd\\git.exe",linOut:"/usr/bin/git"})},
+  {tier:4,fn:()=>{const dom=rDomain(),ip=`142.${Math.floor(Math.random()*100)+100}.${Math.floor(Math.random()*50)+10}.${Math.floor(Math.random()*100)+10}`;return{desc:`Trace the network route to ${dom}`,win:`tracert ${dom}`,lin:`traceroute ${dom}`,winOut:`Tracing route to ${dom} [${ip}]\n  1  1ms  192.168.1.1\n  2  14ms ${ip}\nTrace complete.`,linOut:`traceroute to ${dom} (${ip})\n 1  192.168.1.1  0.812 ms\n 2  ${ip}  13.2 ms`}}},
+  {tier:4,fn:()=>{const dom=rDomain(),ip=`142.${Math.floor(Math.random()*100)+100}.${Math.floor(Math.random()*50)+10}.${Math.floor(Math.random()*100)+10}`;return{desc:`Look up DNS records for ${dom}`,win:`nslookup ${dom}`,lin:`dig ${dom}`,winOut:`Server:  192.168.1.1\nName:    ${dom}\nAddress: ${ip}`,linOut:`; <<>> DiG <<>> ${dom}\n;; ANSWER SECTION:\n${dom}. 300 IN A ${ip}`}}},
+  {tier:4,fn:()=>({desc:"Display the system's ARP cache table",win:"arp -a",lin:"arp -a",winOut:"Interface: 192.168.1.42\n  192.168.1.1   aa-bb-cc-dd-ee-ff  dynamic",linOut:"? (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0"})},
+  {tier:4,fn:()=>({desc:"Show the current IP routing table",win:"route print",lin:"ip route",winOut:"IPv4 Route Table\n  0.0.0.0  255.255.255.0  192.168.1.1  On-link",linOut:"default via 192.168.1.1 dev eth0\n192.168.1.0/24 dev eth0 proto kernel"})},
+];
+const DIFF_CONFIG={
+  noob: {ms:520, typo:0.13, label:"NOOB",       col:"#4ade80",maxTier:1,count:8},
+  power:{ms:240, typo:0.06, label:"POWER USER", col:"#60a5fa",maxTier:2,count:12},
+  root: {ms:130, typo:0.025,label:"ROOT",        col:"#fb923c",maxTier:3,count:16},
+  god:  {ms:75,  typo:0,    label:"GOD MODE",    col:"#f43f5e",maxTier:4,count:20},
+};
+function generateTasks(d){
+  const keys=Object.keys(DIFF_CONFIG);
+  const cfg=DIFF_CONFIG[d]||DIFF_CONFIG[keys[Math.floor(Math.random()*keys.length)]];
+  const s=shuffle(TASK_POOL.filter(t=>t.tier<=cfg.maxTier));
+  return s.slice(0,Math.min(cfg.count,s.length)).map((t,i)=>({...t.fn(),id:i+1}));
+}
+
+const FREE_WIN={cls:n=>"__CLEAR__",dir:n=>" Volume in drive C has no label.\n Directory of C:\\Users\\"+n+"\n\n<DIR>  Desktop\n<DIR>  Documents\n       notes.txt",date:n=>new Date().toUTCString(),whoami:n=>"DESKTOP-PC\\"+n,hostname:n=>"BATTLESTATION-7",cd:n=>"C:\\Users\\"+n,"cd ..":n=>"","cd..":n=>""};
+const FREE_LIN={clear:n=>"__CLEAR__",ls:n=>"docs/  src/  notes.txt  backup.dat  README.md",date:n=>new Date().toString(),whoami:n=>n.toLowerCase(),hostname:n=>"player-machine",pwd:n=>"/home/"+n.toLowerCase(),"cd ..":n=>"","cd..":n=>""};
+const WIN_ERRORS=c=>["'"+c+"' is not recognized as an internal or external command,\noperable program or batch file.","The syntax of the command is incorrect."];
+const LIN_ERRORS=c=>["bash: "+c+": command not found","-bash: "+c.split(" ")[0]+": No such file or directory"];
+const AI_NAMES=["R00T_B0T","SHELL_PHANTOM","BYTE_NINJA","SYS_GHOST","K3RN3L_4CE","NULL_PTR"];
+
+/* ── PEER HELPERS ── */
+function genCode(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join("")}
+function getRoomFromURL(){try{return new URLSearchParams(window.location.search).get("room")||""}catch(e){return""}}
+function buildJoinURL(code){try{const u=new URL(window.location.href);u.search="?room="+code;return u.href}catch(e){return"?room="+code}}
+
+/* ── AUDIO ── */
+function useAudio(sTheme){
+  const ctx=useRef(null);
+  const get=()=>{if(!ctx.current)ctx.current=new(window.AudioContext||window.webkitAudioContext)();return ctx.current};
+  const click=useCallback(()=>{try{const c=get();if(sTheme==="hacker"){const buf=c.createBuffer(1,c.sampleRate*0.018,c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(c.sampleRate*0.004));const s=c.createBufferSource();s.buffer=buf;const g=c.createGain();g.gain.value=0.12;s.connect(g);g.connect(c.destination);s.start();}else{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="square";o.frequency.value=1320;g.gain.setValueAtTime(0.05,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.035);o.start();o.stop(c.currentTime+0.035);}}catch(e){}},[sTheme]);
+  const success=useCallback(()=>{try{const c=get();if(sTheme==="hacker"){const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sine";o.frequency.setValueAtTime(523,c.currentTime);o.frequency.setValueAtTime(659,c.currentTime+0.1);o.frequency.setValueAtTime(784,c.currentTime+0.2);g.gain.setValueAtTime(0.25,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.45);o.start();o.stop(c.currentTime+0.45);}else{[[0,660],[0.1,880]].forEach(([t,f])=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="square";o.frequency.value=f;g.gain.setValueAtTime(0.12,c.currentTime+t);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+t+0.09);o.start(c.currentTime+t);o.stop(c.currentTime+t+0.09);});}}catch(e){}},[sTheme]);
+  const error=useCallback(()=>{try{const c=get();if(sTheme==="hacker"){const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sawtooth";o.frequency.setValueAtTime(140,c.currentTime);g.gain.setValueAtTime(0.18,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.22);o.start();o.stop(c.currentTime+0.22);}else{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="square";o.frequency.setValueAtTime(440,c.currentTime);o.frequency.linearRampToValueAtTime(220,c.currentTime+0.18);g.gain.setValueAtTime(0.12,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.18);o.start();o.stop(c.currentTime+0.18);}}catch(e){}},[sTheme]);
+  const opSuccess=useCallback(()=>{try{const c=get();if(sTheme==="hacker"){const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="sine";o.frequency.setValueAtTime(330,c.currentTime);o.frequency.setValueAtTime(415,c.currentTime+0.1);o.frequency.setValueAtTime(494,c.currentTime+0.2);g.gain.setValueAtTime(0.15,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.4);o.start();o.stop(c.currentTime+0.4);}else{[[0,440],[0.1,550]].forEach(([t,f])=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="square";o.frequency.value=f;g.gain.setValueAtTime(0.08,c.currentTime+t);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+t+0.09);o.start(c.currentTime+t);o.stop(c.currentTime+t+0.09);});}}catch(e){}},
+  [sTheme]);
+  return{click,success,error,opSuccess};
+}
+
+/* ══════════════════════════════════════════════════════ APP ══ */
+function App(){
+  /* ── Display state ── */
+  const [phase,setPhase]             = useState("login");
+  const [vTheme,setVTheme]           = useState("matrix");
+  const [sTheme,setSTheme]           = useState("hacker");
+  const [tasks,setTasks]             = useState([]);
+  const [nameInput,setNameInput]     = useState("");
+  const [playerName,setPlayerName]   = useState("Player");
+  const [pSide,setPSide]             = useState("windows");
+  const [diff,setDiff]               = useState("power");
+  const [pScore,setPScore]           = useState(0);
+  const [aiScore,setAiScore]         = useState(0);
+  const [pTaskIdx,setPTaskIdx]       = useState(0);
+  const [aiTaskIdx,setAiTaskIdx]     = useState(0);
+  const [pHist,setPHist]             = useState([]);
+  const [opHist,setOpHist]           = useState([]);
+  const [pInput,setPInputState]      = useState("");
+  const [cursorPos,setCursorPos]     = useState(0);
+  const [aiTyping,setAiTyping]       = useState("");
+  const [shake,setShake]             = useState(false);
+  const [winner,setWinner]           = useState(null);
+  const [hint,setHint]               = useState(null);
+  /* ── Multiplayer UI state ── */
+  const [netMode,setNetMode]         = useState("solo");
+  const [multiTab,setMultiTab]       = useState("create");
+  const [joinInput,setJoinInput]     = useState("");
+  const [roomCode,setRoomCode]       = useState("");
+  const [lobbyStatus,setLobbyStatus] = useState("idle"); // idle|hosting|joining|finding|connected|error
+  const [lobbyMsg,setLobbyMsg]       = useState("");
+  const [opponentName,setOpponentName] = useState("Opponent");
+  const [opponentSide,setOpponentSide] = useState("linux");
+  const [connStatus,setConnStatus]   = useState(""); // "" | "connected" | "disconnected"
+  const [countdown,setCountdown]     = useState(null); // null|3|2|1|0
+  const [streak,setStreak]           = useState(0);
+  const [rematchReq,setRematchReq]   = useState(null); // null|"sent"|"received"|"declined"
+  const [opFlash,setOpFlash]         = useState(false); // flash opponent terminal on their task complete
+  const [particles,setParticles]     = useState([]); // gameover burst chars
+
+  /* ── Refs (mutable game state) ── */
+  const tasksRef       = useRef([]);
+  const pInputRef      = useRef("");
+  const cursorPosRef   = useRef(0);
+  const cmdHistRef     = useRef([]);
+  const histIdxRef     = useRef(-1);
+  const penaltiesRef   = useRef(0);
+  const pScoreRef      = useRef(0);
+  const pTaskRef       = useRef(0);
+  const pSideRef       = useRef("windows");
+  const aiTaskRef      = useRef(0);
+  const gameActive     = useRef(false);
+  const aiScoreRef     = useRef(0);
+  const pHistRef       = useRef([]);
+  const opHistRef      = useRef([]);
+  const aiTimer        = useRef(null);
+  const aiFallbackTmr  = useRef(null);
+  const pTermRef       = useRef(null);
+  const opTermRef      = useRef(null);
+  const aiName         = useRef(AI_NAMES[Math.floor(Math.random()*AI_NAMES.length)]);
+  const submitRef      = useRef(null);
+  const incomingRef    = useRef(null);
+  /* ── Net refs ── */
+  const peerRef        = useRef(null);
+  const connRef        = useRef(null);
+  const isHostRef      = useRef(false);
+  const isMultiRef     = useRef(false);
+  const lastTypeSend   = useRef(0);
+  const opNameRef      = useRef("Opponent");
+  const opSideRef      = useRef("linux");
+  const streakRef      = useRef(0);
+  const peakStreakRef  = useRef(0);
+  const countdownAfter = useRef(null); // callback to run when countdown hits GO
+  const taskLogRef     = useRef([]);   // [{desc,result,timeMs}]
+  const gameStartTime  = useRef(0);
+
+  const {click,success,error,opSuccess} = useAudio(sTheme);
+
+  /* ── Auto-join from URL ── */
+  useEffect(()=>{
+    const code=getRoomFromURL();
+    if(code){setNetMode("multi");setMultiTab("join");setJoinInput(code.toUpperCase());}
+  },[]);
+
+  /* ── Scroll terminals ── */
+  useEffect(()=>{if(pTermRef.current)pTermRef.current.scrollTop=pTermRef.current.scrollHeight;},[pHist]);
+  useEffect(()=>{if(opTermRef.current)opTermRef.current.scrollTop=opTermRef.current.scrollHeight;},[opHist]);
+  useEffect(()=>()=>{gameActive.current=false;clearTimeout(aiTimer.current);},[]);
+
+  /* ── Keep refs in sync ── */
+  useEffect(()=>{pSideRef.current=pSide;},[pSide]);
+  const setSide=useCallback(s=>{pSideRef.current=s;setPSide(s);},[]);
+  useEffect(()=>{opNameRef.current=opponentName;},[opponentName]);
+  useEffect(()=>{opSideRef.current=opponentSide;},[opponentSide]);
+
+  /* ── Keyboard input ── */
+  const setInput=useCallback((val,cur)=>{pInputRef.current=val;setPInputState(val);if(cur!==undefined){cursorPosRef.current=cur;setCursorPos(cur);}},[]);
+  useEffect(()=>{
+    if(phase!=="playing") return;
+    const onKey=e=>{
+      if(e.metaKey||e.ctrlKey||e.altKey) return;
+      if(e.key==="Enter"){e.preventDefault();submitRef.current?.();return;}
+      if(e.key==="ArrowUp"){e.preventDefault();const h=cmdHistRef.current;if(!h.length)return;const ni=histIdxRef.current<h.length-1?histIdxRef.current+1:h.length-1;histIdxRef.current=ni;const hv=h[ni];setInput(hv,hv.length);return;}
+      if(e.key==="ArrowDown"){e.preventDefault();if(histIdxRef.current<=0){histIdxRef.current=-1;setInput("",0);return;}const ni=histIdxRef.current-1;histIdxRef.current=ni;const hv=cmdHistRef.current[ni];setInput(hv,hv.length);return;}
+      if(e.key==="ArrowLeft"){e.preventDefault();const np=Math.max(0,cursorPosRef.current-1);cursorPosRef.current=np;setCursorPos(np);return;}
+      if(e.key==="ArrowRight"){e.preventDefault();const np=Math.min(pInputRef.current.length,cursorPosRef.current+1);cursorPosRef.current=np;setCursorPos(np);return;}
+      if(e.key==="Home"){e.preventDefault();cursorPosRef.current=0;setCursorPos(0);return;}
+      if(e.key==="End"){e.preventDefault();const ep=pInputRef.current.length;cursorPosRef.current=ep;setCursorPos(ep);return;}
+      if(e.key==="Backspace"){e.preventDefault();const pos=cursorPosRef.current;if(pos===0)return;const v=pInputRef.current;const nv=v.slice(0,pos-1)+v.slice(pos);setInput(nv,pos-1);click();
+        if(isMultiRef.current){try{connRef.current?.send({type:"typing",text:nv});}catch(e){}}
+        return;}
+      if(e.key==="Delete"){e.preventDefault();const pos=cursorPosRef.current;const v=pInputRef.current;if(pos>=v.length)return;const nv=v.slice(0,pos)+v.slice(pos+1);setInput(nv,pos);click();return;}
+      if(e.key.length===1){const pos=cursorPosRef.current;const v=pInputRef.current;const nv=v.slice(0,pos)+e.key+v.slice(pos);setInput(nv,pos+1);click();
+        if(isMultiRef.current){const now=Date.now();if(now-lastTypeSend.current>80){lastTypeSend.current=now;try{connRef.current?.send({type:"typing",text:nv});}catch(e){}}}
+        return;}
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[phase,setInput,click]);
+
+  /* ── Terminal helpers ── */
+  const addLine=useCallback((side,prompt,cmd,output)=>{
+    const e={prompt,cmd,output,id:Date.now()+Math.random()};
+    if(side==="player"){
+      pHistRef.current=[...pHistRef.current,e];setPHist([...pHistRef.current]);
+      if(isMultiRef.current){try{connRef.current?.send({type:"line",prompt,cmd,output});}catch(er){}}
+    }
+    else{opHistRef.current=[...opHistRef.current,e];setOpHist([...opHistRef.current]);}
+  },[]);
+  const clearTerm=useCallback(side=>{
+    if(side==="player"){
+      pHistRef.current=[];setPHist([]);
+      if(isMultiRef.current){try{connRef.current?.send({type:"clear"});}catch(er){}}
+    }
+    else{opHistRef.current=[];setOpHist([]);}
+  },[]);
+
+  /* ── Net send ── */
+  const netSend=useCallback(msg=>{try{connRef.current?.send(msg);}catch(e){}},[]);
+
+  /* ── Peer cleanup ── */
+  const cleanupPeer=useCallback(()=>{
+    try{connRef.current?.close();}catch(e){}
+    try{peerRef.current?.destroy();}catch(e){}
+    connRef.current=null; peerRef.current=null;
+  },[]);
+
+  /* ── AI engine ── */
+  const scheduleAI=useCallback((idx,side,d)=>{
+    if(!gameActive.current||idx>=tasksRef.current.length) return;
+    const task=tasksRef.current[idx];
+    const target=side==="win"?task.win:task.lin;
+    const {ms,typo}=DIFF_CONFIG[d];
+    const prompt=side==="win"?"C:\\Users\\"+aiName.current+">":(aiName.current.toLowerCase()+"@machine:~$");
+    let built="",ci=0;
+    const typeChar=()=>{
+      if(!gameActive.current) return;
+      if(ci>=target.length){
+        setTimeout(()=>{
+          if(!gameActive.current) return;
+          const out=side==="win"?task.winOut:task.linOut;
+          if(out==="__CLEAR__")clearTerm("opp");else addLine("opp",prompt,target,out);
+          setAiTyping("");
+          const aiScr=idx+1; aiScoreRef.current=aiScr; setAiTaskIdx(aiScr);
+          setAiScore(aiScr); opSuccess();
+          setOpFlash(true); setTimeout(()=>setOpFlash(false),600);
+          if(aiScr>=tasksRef.current.length){
+            gameActive.current=false;
+            /* AI finished — player wins only if their current score exceeds AI's */
+            setWinner(pScoreRef.current>aiScr?"player":"ai"); setPhase("gameover"); return;
+          }
+          aiTimer.current=setTimeout(()=>scheduleAI(idx+1,side,d),400+Math.random()*300);
+        },ms*1.5);return;
+      }
+      if(typo>0&&Math.random()<typo&&ci>2){
+        const bad=String.fromCharCode(target.charCodeAt(ci)+(Math.random()>0.5?1:-1));
+        built+=bad;setAiTyping(built);
+        setTimeout(()=>{if(!gameActive.current)return;built=built.slice(0,-1);setAiTyping(built);
+          setTimeout(()=>{if(!gameActive.current)return;built+=target[ci];ci++;setAiTyping(built);aiTimer.current=setTimeout(typeChar,ms+Math.random()*ms*0.5);},ms*1.2);},ms*1.5);return;
+      }
+      built+=target[ci];ci++;setAiTyping(built);
+      aiTimer.current=setTimeout(typeChar,ms+Math.random()*ms*0.4);
+    };
+    aiTimer.current=setTimeout(typeChar,200+Math.random()*400);
+  },[addLine,clearTerm,success,opSuccess]);
+
+  /* ── Incoming network messages ── */
+  const handleIncoming=useCallback(msg=>{
+    if(!msg||!msg.type) return;
+    const side=pSideRef.current;
+    const oppSide=side==="windows"?"lin":"win";
+    const oppName=opNameRef.current;
+    const oppPrompt=oppSide==="win"?"C:\\Users\\"+oppName+">":(oppName.toLowerCase()+"@machine:~$");
+    switch(msg.type){
+      case "start":{
+        /* guest receives tasks + assigned side from host */
+        // guest keeps their own chosen side; learn opponent's side from host
+        setOpponentName(msg.hostName||"Host"); opNameRef.current=msg.hostName||"Host";
+        const hostSide=msg.hostSide||"windows";
+        setOpponentSide(hostSide); opSideRef.current=hostSide;
+        aiName.current=msg.hostName||"HOST";
+        const nt=msg.tasks; tasksRef.current=nt; setTasks(nt);
+        /* boot terminals */
+        const guestName=playerName||pInputRef.current||"Player";
+        const hostName2=opNameRef.current||"Host";
+        const guestIsWin=pSideRef.current==="windows";
+        const hostIsWin=(msg.hostSide||"windows")==="windows";
+        const pw={prompt:"C:\\Users\\"+guestName+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:0};
+        const pl={prompt:guestName.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:1};
+        const ow={prompt:"C:\\Users\\"+hostName2+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:2};
+        const ol={prompt:hostName2.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:3};
+        pHistRef.current=[guestIsWin?pw:pl]; setPHist([guestIsWin?pw:pl]);
+        opHistRef.current=[hostIsWin?ow:ol]; setOpHist([hostIsWin?ow:ol]);
+        setPScore(0);penaltiesRef.current=0;pScoreRef.current=0;aiScoreRef.current=0;setAiScore(0);setPTaskIdx(0);setAiTaskIdx(0);
+        pTaskRef.current=0;aiTaskRef.current=0;
+        setAiTyping("");setInput("");setHint(null);
+        setRematchReq(null); streakRef.current=0; peakStreakRef.current=0; setStreak(0);
+        isMultiRef.current=true; /* set before countdown so net msgs work */
+        countdownAfter.current=null;
+        setCountdown(3); setPhase("playing");
+        break;
+      }
+      case "progress":{
+        const idx=msg.idx;
+        const sc=msg.score!==undefined?msg.score:idx;
+        aiTaskRef.current=idx; setAiTaskIdx(idx); aiScoreRef.current=sc; setAiScore(sc);
+        opSuccess();
+        setOpFlash(true); setTimeout(()=>setOpFlash(false),600);
+        if(idx>=tasksRef.current.length){
+          const myNow=pScoreRef.current;
+          gameActive.current=false;
+          setWinner(myNow>=sc?"player":"ai"); setPhase("gameover");
+        }
+        break;
+      }
+      case "line":
+        {const e={prompt:msg.prompt,cmd:msg.cmd,output:msg.output,id:Date.now()+Math.random()};
+        opHistRef.current=[...opHistRef.current,e];setOpHist([...opHistRef.current]);}
+        break;
+      case "clear":
+        opHistRef.current=[];setOpHist([]);
+        break;
+      case "typing":
+        setAiTyping(msg.text||"");
+        break;
+      case "won":
+        if(gameActive.current){
+          const theirFinal=msg.score!==undefined?msg.score:aiTaskRef.current;
+          const myNow=pScoreRef.current;
+          aiScoreRef.current=theirFinal; setAiScore(theirFinal);
+          gameActive.current=false;
+          setWinner(myNow>theirFinal?"player":"ai"); setPhase("gameover");
+        }
+        break;
+      case "rematch":
+        cleanupPeer(); setPhase("login"); setLobbyStatus("idle");
+        break;
+      case "rematch_req":
+        setRematchReq("received");
+        break;
+      case "rematch_acc":
+        /* both go back to login */
+        cleanupPeer(); setRematchReq(null); setPhase("login"); setLobbyStatus("idle");
+        break;
+      case "rematch_dec":
+        setRematchReq("declined");
+        break;
+      default: break;
+    }
+  },[addLine,clearTerm,success,opSuccess,cleanupPeer,setInput]);
+  useEffect(()=>{incomingRef.current=handleIncoming;},[handleIncoming]);
+
+  /* ── Countdown 3-2-1-GO ── */
+  useEffect(()=>{
+    if(countdown===null) return;
+    if(countdown>0){
+      const t=setTimeout(()=>setCountdown(n=>n-1),1000);
+      return()=>clearTimeout(t);
+    } else {
+      /* countdown hit 0 — show GO briefly then open game */
+      const t=setTimeout(()=>{
+        setCountdown(null);
+        gameActive.current=true;
+        gameStartTime.current=Date.now();
+        taskLogRef.current=tasksRef.current.map(t=>({desc:t.desc,result:"pending",timeMs:null}));
+        countdownAfter.current?.();
+        countdownAfter.current=null;
+      },700);
+      return()=>clearTimeout(t);
+    }
+  },[countdown]);
+
+  /* ── Disconnect handler ── */
+  const handleDisconnect=useCallback(()=>{
+    if(!gameActive.current) return;
+    gameActive.current=false;
+    setConnStatus("disconnected");
+    setTimeout(()=>{setWinner("disconnect");setPhase("gameover");},1200);
+  },[]);
+
+  /* ── Attach conn listeners ── */
+  const attachConn=useCallback((conn,asHost)=>{
+    connRef.current=conn;
+    conn.on("data",msg=>incomingRef.current?.(msg));
+    conn.on("close",handleDisconnect);
+    conn.on("error",handleDisconnect);
+    if(asHost){
+      conn.on("open",()=>{
+        setLobbyStatus("connected");
+        setLobbyMsg("Opponent connected! Starting game...");
+        clearTimeout(aiFallbackTmr.current);
+        /* small delay then send start */
+        setTimeout(()=>{
+          const name=nameInput.trim()||"Player";
+          const guestSide=conn.metadata?.side||"windows";
+          const chosenDiff=Object.keys(DIFF_CONFIG)[Math.floor(Math.random()*Object.keys(DIFF_CONFIG).length)];
+          const hostTasks=generateTasks(chosenDiff);
+          const guestTasks=generateTasks(chosenDiff);
+          tasksRef.current=hostTasks;
+          conn.send({type:"start",tasks:guestTasks,hostSide:pSideRef.current,guestSide,hostName:name,diff:chosenDiff});
+          /* boot host side */
+          setOpponentName(conn.metadata?.name||"Opponent"); opNameRef.current=conn.metadata?.name||"Opponent";
+          setOpponentSide(guestSide); opSideRef.current=guestSide;
+          aiName.current=conn.metadata?.name||"Opponent";
+          setTasks(hostTasks);
+          const hIsWin=pSideRef.current==="windows";
+          const gIsWin=(guestSide)==="windows";
+          const hpw={prompt:"C:\\Users\\"+name+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:0};
+          const hpl={prompt:name.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:1};
+          const opw={prompt:"C:\\Users\\"+(conn.metadata?.name||"Opponent")+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:2};
+          const opl={prompt:(conn.metadata?.name||"opponent").toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:3};
+          pHistRef.current=[hIsWin?hpw:hpl]; setPHist([hIsWin?hpw:hpl]);
+          opHistRef.current=[gIsWin?opw:opl]; setOpHist([gIsWin?opw:opl]);
+          setPScore(0);penaltiesRef.current=0;pScoreRef.current=0;aiScoreRef.current=0;setAiScore(0);setPTaskIdx(0);setAiTaskIdx(0);
+          pTaskRef.current=0;aiTaskRef.current=0;
+          setAiTyping("");setInput("");setHint(null);
+          setRematchReq(null); streakRef.current=0; peakStreakRef.current=0; setStreak(0);
+          isMultiRef.current=true;
+          countdownAfter.current=null;
+          setCountdown(3); setPhase("playing");
+        },800);
+      });
+    }
+  },[nameInput,diff,setInput,handleDisconnect]);
+
+  /* ── Create Room ── */
+  const createRoom=useCallback(()=>{
+    const name=nameInput.trim()||"Player"; setPlayerName(name);
+    const code=genCode();
+    setRoomCode(code); setLobbyStatus("hosting"); setLobbyMsg("Waiting for opponent...");
+    setPhase("lobby");
+    cleanupPeer();
+    const peer=new Peer("tb-"+code);
+    peerRef.current=peer;
+    peer.on("error",e=>{setLobbyMsg("Connection error: "+e.type);setLobbyStatus("error");});
+    peer.on("connection",conn=>{
+      if(connRef.current){conn.close();return;} /* already have opponent */
+      attachConn(conn,true);
+    });
+    /* AI fallback after 20s */
+    aiFallbackTmr.current=setTimeout(()=>{
+      if(lobbyStatus==="hosting"||true){ /* always show after 20s if no one joined */
+        setLobbyMsg("No one joined yet...");
+      }
+    },20000);
+  },[nameInput,cleanupPeer,attachConn,lobbyStatus]);
+
+  /* ── Join Room ── */
+  const joinRoom=useCallback((code)=>{
+    const name=nameInput.trim()||"Player"; setPlayerName(name);
+    const c=code.toUpperCase().trim();
+    if(!c||c.length!==4){setLobbyMsg("Enter a 4-character room code.");return;}
+    setRoomCode(c); setLobbyStatus("joining"); setLobbyMsg("Connecting to "+c+"...");
+    setPhase("lobby");
+    cleanupPeer();
+    const peer=new Peer(undefined,{});
+    peerRef.current=peer;
+    peer.on("open",()=>{
+      const conn=peer.connect("tb-"+c,{metadata:{name,side:pSideRef.current},reliable:true});
+      connRef.current=conn;
+      isHostRef.current=false;
+      conn.on("open",()=>{setLobbyStatus("connected");setLobbyMsg("Connected! Waiting for host to start...");});
+      conn.on("data",msg=>incomingRef.current?.(msg));
+      conn.on("close",handleDisconnect);
+      conn.on("error",e=>{setLobbyMsg("Room '"+c+"' not found. Check the code.");setLobbyStatus("error");});
+    });
+    peer.on("error",e=>{setLobbyMsg("Error: "+e.type+". Check room code.");setLobbyStatus("error");});
+  },[nameInput,cleanupPeer,handleDisconnect]);
+
+  /* ── Find Random Opponent ── */
+  const findOpponent=useCallback(()=>{
+    const name=nameInput.trim()||"Player"; setPlayerName(name);
+    setLobbyStatus("finding"); setLobbyMsg("Searching for opponent...");
+    setPhase("lobby");
+    cleanupPeer();
+    const qId="tb-q-"+diff;
+    /* Step 1: try to connect to existing queue slot */
+    const tempPeer=new Peer();
+    peerRef.current=tempPeer;
+    let found=false;
+    tempPeer.on("open",()=>{
+      const tryConn=tempPeer.connect(qId,{metadata:{name,side:pSideRef.current},reliable:true});
+      const timeout=setTimeout(()=>{
+        if(!found){
+          /* Step 2: become queue host */
+          try{tryConn.close();}catch(e){}
+          tempPeer.destroy();
+          const qPeer=new Peer(qId);
+          peerRef.current=qPeer;
+          qPeer.on("error",e=>{
+            if(e.type==="unavailable-id"){
+              /* slot taken, retry as guest after delay */
+              setLobbyMsg("Queue busy, retrying...");
+              setTimeout(()=>findOpponent(),2500);
+            } else {
+              setLobbyMsg("Network error. Try again.");setLobbyStatus("error");
+            }
+          });
+          qPeer.on("open",()=>{
+            isHostRef.current=true;
+            setLobbyStatus("hosting"); setRoomCode("QUEUE"); setLobbyMsg("Waiting in queue...");
+            qPeer.on("connection",conn=>{
+              if(connRef.current){conn.close();return;}
+              attachConn(conn,true);
+            });
+            /* AI fallback after 25s */
+            aiFallbackTmr.current=setTimeout(()=>setLobbyMsg("No opponent found yet..."),25000);
+          });
+        }
+      },2200);
+      tryConn.on("open",()=>{
+        found=true; clearTimeout(timeout);
+        isHostRef.current=false;
+        connRef.current=tryConn;
+        setLobbyStatus("connected"); setLobbyMsg("Found opponent! Waiting to start...");
+        tryConn.on("data",msg=>incomingRef.current?.(msg));
+        tryConn.on("close",handleDisconnect);
+      });
+    });
+    tempPeer.on("error",e=>{setLobbyMsg("Network error. Are you online?");setLobbyStatus("error");});
+  },[nameInput,diff,cleanupPeer,attachConn,handleDisconnect]);
+
+  /* ── Start Solo game (AI) ── */
+  const startSoloGame=useCallback(()=>{
+    const name=nameInput.trim()||"Player"; setPlayerName(name);
+    cleanupPeer(); isMultiRef.current=false;
+    const nt=generateTasks(diff); tasksRef.current=nt; setTasks(nt);
+    setPScore(0);penaltiesRef.current=0;pScoreRef.current=0;setAiScore(0);setPTaskIdx(0);setAiTaskIdx(0);
+    pTaskRef.current=0;aiTaskRef.current=0;
+    setWinner(null);setRematchReq(null);setAiTyping("");setInput("");setHint(null);
+    streakRef.current=0;peakStreakRef.current=0;setStreak(0);
+    const iw={prompt:"C:\\Users\\"+name+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:0};
+    const il={prompt:name.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:1};
+    const pIsW=pSide==="windows";
+    pHistRef.current=[pIsW?iw:il]; setPHist([pIsW?iw:il]);
+    const aiIsW=!pIsW;
+    const aiIw={prompt:"C:\\Users\\"+AI_NAMES[0]+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:2};
+    const aiIl={prompt:"bot@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:3};
+    opHistRef.current=[aiIsW?aiIw:aiIl]; setOpHist([aiIsW?aiIw:aiIl]);
+    const newAiName=AI_NAMES[Math.floor(Math.random()*AI_NAMES.length)];
+    aiName.current=newAiName; setOpponentName(newAiName); opNameRef.current=newAiName;
+    setOpponentSide(aiIsW?"windows":"linux"); opSideRef.current=aiIsW?"windows":"linux";
+    aiScoreRef.current=0;
+    const aiSide=pIsW?"lin":"win";
+    countdownAfter.current=()=>setTimeout(()=>scheduleAI(0,aiSide,diff),200);
+    setCountdown(3); setPhase("playing");
+  },[nameInput,pSide,diff,cleanupPeer,setInput,scheduleAI]);
+
+  /* ── handleSubmit ── */
+  const makeHint=cmd=>{const h=Math.ceil(cmd.length*0.55);return cmd.split("").map((c,i)=>i<h?c:(c===" "?" ":"_")).join("")};
+  const handleSubmit=useCallback(()=>{
+    if(!gameActive.current) return;
+    const cmd=pInputRef.current.trim(); if(!cmd) return;
+    cursorPosRef.current=0; setCursorPos(0);
+    if(isMultiRef.current){try{connRef.current?.send({type:"typing",text:""});}catch(er){}} /* clear opponent's typing preview */
+    if(cmdHistRef.current[0]!==cmd)cmdHistRef.current.unshift(cmd);
+    if(cmdHistRef.current.length>50)cmdHistRef.current.pop();
+    histIdxRef.current=-1;
+    const idx=pTaskRef.current;
+    const side=pSideRef.current==="windows"?"win":"lin";
+    const prompt=pSideRef.current==="windows"?"C:\\Users\\"+(playerName||"Player")+">":(( playerName||"player").toLowerCase()+"@machine:~$");
+    /* SKIP */
+    if(cmd.toLowerCase()==="skip"){
+      if(idx>=tasksRef.current.length){setInput("");return;}
+      streakRef.current=0; setStreak(0);
+      pScoreRef.current-=1;
+      const newSkipScore=Math.max(0,pScoreRef.current);
+      setPScore(newSkipScore);
+      if(taskLogRef.current[idx])taskLogRef.current[idx]={...taskLogRef.current[idx],result:"skip"};
+      addLine("player",prompt,"skip",`[SKIP] −1 pt penalty · Score: ${newSkipScore}`);
+      setInput("");setHint(null);
+      const ni=idx+1; pTaskRef.current=ni; setPTaskIdx(ni);
+      if(isMultiRef.current)netSend({type:"progress",idx:ni,score:Math.max(0,pScoreRef.current)});
+      if(ni>=tasksRef.current.length){
+        gameActive.current=false; clearTimeout(aiTimer.current);
+        if(isMultiRef.current)netSend({type:"won",score:newSkipScore});
+        setWinner(Math.max(0,pScoreRef.current)>aiScoreRef.current?"player":"ai"); setPhase("gameover");
+      }
+      return;
+    }
+    /* HELP */
+    if(cmd.toLowerCase()==="help"){
+      if(idx>=tasksRef.current.length){setInput("");return;}
+      const t=tasksRef.current[idx];
+      const exp=side==="win"?t.win:t.lin;
+      const hs=makeHint(exp);
+      addLine("player",prompt,"help","[HINT] Penalty: -0.5 pt  ·  "+hs);
+      setInput("");setHint(hs);
+      pScoreRef.current-=0.5;
+      const newHelpScore=Math.max(0,pScoreRef.current);
+      pScoreRef.current=newHelpScore; setPScore(newHelpScore);
+      return;
+    }
+    /* CURRENT TASK */
+    if(idx<tasksRef.current.length){
+      const t=tasksRef.current[idx];
+      const exp=side==="win"?t.win:t.lin;
+      if(cmd.toLowerCase()===exp.toLowerCase()){
+        const out=side==="win"?t.winOut:t.linOut;
+        if(out==="__CLEAR__")clearTerm("player");else addLine("player",prompt,cmd,out);
+        setInput("");setHint(null);
+        const ni=idx+1; pTaskRef.current=ni; setPTaskIdx(ni);
+        streakRef.current+=1; if(streakRef.current>peakStreakRef.current)peakStreakRef.current=streakRef.current;
+        setStreak(streakRef.current);
+        /* streak bonus: +0.5 every 3rd consecutive correct */
+        if(streakRef.current>0&&streakRef.current%3===0) pScoreRef.current+=0.5;
+        pScoreRef.current+=1; const myFinal=Math.max(0,pScoreRef.current); setPScore(myFinal); success();
+        /* log task */
+        if(taskLogRef.current[idx])taskLogRef.current[idx]={...taskLogRef.current[idx],result:"done",timeMs:Date.now()-gameStartTime.current};
+        if(isMultiRef.current)netSend({type:"progress",idx:ni,score:myFinal});
+        if(ni>=tasksRef.current.length){
+          gameActive.current=false; clearTimeout(aiTimer.current);
+          if(isMultiRef.current)netSend({type:"won",score:myFinal});
+          setWinner(myFinal>aiScoreRef.current?"player":"ai"); setPhase("gameover");
+        }
+        return;
+      }
+    }
+    /* FREE COMMANDS */
+    const fmap=pSideRef.current==="windows"?FREE_WIN:FREE_LIN;
+    const free=fmap[cmd.toLowerCase()];
+    if(free){const o=free(playerName||"Player");if(o==="__CLEAR__")clearTerm("player");else addLine("player",prompt,cmd,o);setInput("");return;}
+    /* ERROR */
+    const errs=pSideRef.current==="windows"?WIN_ERRORS(cmd):LIN_ERRORS(cmd);
+    addLine("player",prompt,cmd,errs[Math.floor(Math.random()*errs.length)]);
+    streakRef.current=0; setStreak(0);
+    setInput("");error();setShake(true);setTimeout(()=>setShake(false),500);
+  },[playerName,addLine,clearTerm,success,error,netSend,setInput]);
+  useEffect(()=>{submitRef.current=handleSubmit;},[handleSubmit]);
+
+  /* ── Render helpers ── */
+  const getState=(i,pi,ai)=>i<pi?"done":i<ai?"ai-done":i===pi?"active":"future";
+  const isRetro=vTheme==="retro";
+  const winGlow=isRetro?"#c0c0c0":"#c8c8c8";
+  const linGlow=isRetro?"#00ff00":"#00ff41";
+  const raised={boxShadow:"inset -1px -1px #0a0a0a,inset 1px 1px #ffffff,inset -2px -2px grey,inset 2px 2px silver"};
+  const sunken={boxShadow:"inset 1px 1px #0a0a0a,inset -1px -1px #ffffff,inset 2px 2px grey,inset -2px -2px silver"};
+
+  const Overlay=()=>!isRetro?(<>
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:999,background:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)"}}/>
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:998,background:"radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.85) 100%)"}}/>
+  </>):null;
+
+  const WinChrome=({label,onClose})=>(
+    <div style={{background:"linear-gradient(to right,#000080,#1084d0)",color:"#fff",padding:"3px 6px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:"12px",flexShrink:0,userSelect:"none"}}>
+      <span>{label}</span>
+      <span style={{display:"flex",gap:"1px"}}>
+        {["─","□","✕"].map((c,i)=>(
+          <span key={i} onClick={i===2?onClose:undefined} style={{display:"inline-block",width:"16px",height:"14px",background:"#c0c0c0",...raised,fontSize:"9px",textAlign:"center",lineHeight:"14px",color:"#000",cursor:"default"}}>{c}</span>
+        ))}
+      </span>
+    </div>
+  );
+
+  const renderHist=(hist,pc,cc)=>hist.map(h=>(
+    <div key={h.id} style={{marginBottom:"2px"}}>
+      {h.prompt&&<span style={{color:pc,textShadow:isRetro?"none":"0 0 4px "+pc+"60"}}>{h.prompt} </span>}
+      {h.cmd&&<span style={{color:cc,textShadow:isRetro?"none":"0 0 4px "+cc+"60"}}>{h.cmd}</span>}
+      {h.output&&<div style={{color:isRetro?"#aaa":"#888",marginTop:"1px"}}>{h.output}</div>}
+    </div>
+  ));
+
+  /* S — shared style helpers */
+  const S={
+    root:    {fontFamily:isRetro?"'VT323','Courier New',monospace":"'Fira Code',Consolas,monospace",background:isRetro?"#008080":"#050505",height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden",position:"relative"},
+    header:  isRetro?{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"3px 8px",background:"#c0c0c0",borderBottom:"2px solid #808080",flexShrink:0,...raised}:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 16px",borderBottom:"1px solid #1a2a1a",background:"#000",flexShrink:0},
+    badge:   c=>isRetro?{fontSize:"13px",padding:"2px 10px",background:"#c0c0c0",color:"#000080",minWidth:"140px",textAlign:"center",...raised}:{fontSize:"12px",letterSpacing:"0.1em",padding:"4px 12px",border:"1px solid "+c,borderRadius:"2px",color:c,textShadow:"0 0 8px "+c,minWidth:"140px",textAlign:"center"},
+    logo:    isRetro?{fontSize:"15px",fontWeight:"bold",textAlign:"center",flexGrow:1,color:"#000080",letterSpacing:"0.1em"}:{fontSize:"18px",letterSpacing:"0.15em",fontWeight:"bold",textAlign:"center",flexGrow:1},
+    panels:  {display:"flex",flex:1,overflow:"hidden",gap:"3px",padding:"3px",background:isRetro?"#808080":"#0a0a0a"},
+    tWrap:   g=>isRetro?{flex:"0 0 calc(35% - 3px)",display:"flex",flexDirection:"column",background:"#c0c0c0",overflow:"hidden",...raised}:{flex:"0 0 calc(35% - 3px)",display:"flex",flexDirection:"column",background:"#000",border:"1px solid "+g+"30",borderRadius:"2px",overflow:"hidden",boxShadow:"inset 0 0 30px "+g+"05"},
+    tHdr:    g=>isRetro?null:{padding:"4px 10px",background:g+"15",borderBottom:"1px solid "+g+"30",fontSize:"11px",letterSpacing:"0.12em",color:g,textShadow:"0 0 6px "+g,flexShrink:0},
+    tBody:   {flex:1,padding:"6px 8px",overflowY:"auto",fontSize:isRetro?"13px":"11.5px",lineHeight:"1.5",whiteSpace:"pre-wrap",wordBreak:"break-all",background:"#000"},
+    cur:     col=>({display:"inline-block",width:"2px",height:isRetro?"14px":"13px",background:col,animation:"blink 1s step-end infinite",verticalAlign:"middle",marginLeft:"1px",marginRight:"1px"}),
+    mWrap:   isRetro?{flex:"0 0 calc(30% - 3px)",display:"flex",flexDirection:"column",background:"#c0c0c0",overflow:"hidden",...raised}:{flex:"0 0 calc(30% - 3px)",display:"flex",flexDirection:"column",background:"#000",border:"1px solid #1a2a1a",borderRadius:"2px",overflow:"hidden"},
+    mTitle:  isRetro?{padding:"3px 8px",background:"linear-gradient(to right,#000080,#1084d0)",color:"#fff",fontSize:"12px",flexShrink:0}:{padding:"5px 8px",fontSize:"11px",letterSpacing:"0.1em",textAlign:"center",color:"#60a5fa",borderBottom:"2px solid #60a5fa",background:"#001530",flexShrink:0},
+    tItem:   st=>{if(isRetro){const b={padding:"3px 6px",marginBottom:"1px",fontSize:"12px",lineHeight:"1.4"};if(st==="done")return{...b,color:"#808080",textDecoration:"line-through"};if(st==="ai-done")return{...b,color:"#804040",textDecoration:"line-through"};if(st==="active")return{...b,color:"#fff",background:"#000080",animation:"rpulse 2s ease-in-out infinite"};return{...b,color:"#202020"};}const b={padding:"4px 6px",marginBottom:"2px",borderRadius:"2px",fontSize:"10.5px",lineHeight:"1.4",borderLeft:"2px solid transparent",transition:"all 0.2s"};if(st==="done")return{...b,color:"#2a5a2a",borderLeftColor:"#2a5a2a",textDecoration:"line-through"};if(st==="ai-done")return{...b,color:"#6a2a2a",borderLeftColor:"#6a2a2a",textDecoration:"line-through"};if(st==="active")return{...b,color:"#7dd3fc",borderLeftColor:"#3b82f6",background:"#001830",boxShadow:"0 0 8px #3b82f620,inset 0 0 8px #3b82f608",animation:"mpulse 2s ease-in-out infinite"};return{...b,color:"#2d5a2d"};},
+    mFoot:   isRetro?{padding:"5px 8px",borderTop:"1px solid #808080",background:"#d4d0c8",flexShrink:0}:{padding:"6px 8px",borderTop:"1px solid #0d1a0d",background:"#000805",flexShrink:0},
+    lWrap:   {display:"flex",alignItems:"center",justifyContent:"center",flex:1,flexDirection:"column",gap:"6px",padding:"20px",overflowY:"auto"},
+    lBox:    isRetro?{width:"min(520px,100%)",background:"#c0c0c0",...raised,padding:0}:{width:"min(520px,100%)",background:"#000",border:"1px solid #00ff4130",boxShadow:"0 0 40px #00ff4110",padding:"24px",borderRadius:"2px"},
+    lbl:     isRetro?{color:"#000080",fontSize:"12px",marginBottom:"3px",display:"block"}:{color:"#4ade80",fontSize:"11px",letterSpacing:"0.12em",marginBottom:"4px",display:"block"},
+    inp:     isRetro?{width:"100%",background:"#fff",color:"#000",padding:"3px 6px",fontSize:"13px",outline:"none",marginBottom:"10px",fontFamily:"inherit",border:"none",...sunken}:{width:"100%",background:"#0a0a0a",border:"1px solid #00ff4140",color:"#00ff41",padding:"8px 10px",fontSize:"13px",outline:"none",borderRadius:"1px",marginBottom:"12px",fontFamily:"inherit"},
+    bGroup:  {display:"flex",gap:"6px",marginBottom:"10px",flexWrap:"wrap"},
+    btn:     isRetro?(a,c)=>({padding:"4px 12px",background:a?"#000080":"#c0c0c0",color:a?"#fff":"#000",fontSize:"12px",cursor:"pointer",fontFamily:"inherit",border:"none",...(a?{}:raised)}):(a,c)=>({padding:"6px 14px",background:a?c+"20":"transparent",border:"1px solid "+(a?c:c+"40"),color:a?c:c+"80",fontSize:"11px",cursor:"pointer",letterSpacing:"0.1em",transition:"all 0.15s",borderRadius:"1px",fontFamily:"inherit"}),
+    startBtn:isRetro?{width:"100%",padding:"6px",background:"#c0c0c0",color:"#000",fontSize:"13px",cursor:"pointer",fontFamily:"inherit",border:"none",...raised,marginTop:"4px"}:{width:"100%",padding:"10px",background:"#001a00",border:"1px solid #00ff41",color:"#00ff41",fontSize:"13px",letterSpacing:"0.2em",cursor:"pointer",textShadow:"0 0 10px #00ff41",boxShadow:"0 0 20px #00ff4120",transition:"all 0.2s",fontFamily:"inherit"},
+    goWrap:  {display:"flex",flex:1,alignItems:"center",justifyContent:"center",flexDirection:"column"},
+    goBox:   w=>isRetro?{textAlign:"center",padding:"30px 40px",background:"#c0c0c0",...raised}:{textAlign:"center",padding:"40px",border:"1px solid "+(w?"#00ff41":"#f43f5e"),boxShadow:"0 0 60px "+(w?"#00ff4120":"#f43f5e20")},
+  };
+
+  const fmt=s=>Number.isInteger(s)?s:s.toFixed(1);
+  const pPrompt=pSide==="windows"?"C:\\Users\\"+playerName+">":playerName.toLowerCase()+"@machine:~$";
+  const opPrompt=opponentSide==="windows"?"C:\\Users\\"+opponentName+">":opponentName.toLowerCase()+"@machine:~$";
+
+  /* ════════════ LOGIN ════════════ */
+  if(phase==="login"){
+    const multiForm=(
+      <div>
+        <div style={{display:"flex",gap:"0",marginBottom:"10px"}}>
+          {["create","join","find"].map(t=>(
+            <button key={t} onClick={()=>setMultiTab(t)} style={{...S.btn(multiTab===t,isRetro?"x":"#00ff41"),flex:1,padding:isRetro?"4px":"6px 8px",fontSize:isRetro?"11px":"10px",letterSpacing:"0.08em"}}>
+              {t==="create"?"⊕ CREATE":t==="join"?"⤵ JOIN":"⟳ FIND"}
+            </button>
+          ))}
+        </div>
+        {multiTab==="create"&&(
+          <div>
+            <div style={{fontSize:isRetro?"11px":"10px",color:isRetro?"#404040":"#1a4a1a",marginBottom:"8px"}}>
+              Create a private room. Share the code with your opponent.
+            </div>
+            <button style={S.startBtn} onClick={createRoom}>
+              {isRetro?"[ Create Room ]":"[ CREATE ROOM ]"}
+            </button>
+          </div>
+        )}
+        {multiTab==="join"&&(
+          <div>
+            <label style={S.lbl}>{isRetro?"Room Code:":"ROOM CODE:"}</label>
+            <input style={{...S.inp,letterSpacing:"0.3em",textTransform:"uppercase"}} value={joinInput}
+              onChange={e=>setJoinInput(e.target.value.toUpperCase().slice(0,4))}
+              onKeyDown={e=>{if(e.key==="Enter")joinRoom(joinInput);}}
+              placeholder="XXXX" maxLength={4} autoFocus/>
+            <button style={S.startBtn} onClick={()=>joinRoom(joinInput)}>
+              {isRetro?"[ Join Room ]":"[ JOIN ROOM ]"}
+            </button>
+          </div>
+        )}
+        {multiTab==="find"&&(
+          <div>
+            <div style={{fontSize:isRetro?"11px":"10px",color:isRetro?"#404040":"#1a4a1a",marginBottom:"8px"}}>
+              Find a random opponent at your difficulty level. Falls back to AI if no one found.
+            </div>
+            <button style={S.startBtn} onClick={findOpponent}>
+              {isRetro?"[ Find Opponent ]":"[ FIND OPPONENT ]"}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+
+    const inner=isRetro?(
+      <div style={{padding:"14px 18px"}}>
+        <div style={{fontSize:"20px",color:"#000080",marginBottom:"4px",textAlign:"center",fontWeight:"bold",letterSpacing:"0.1em"}}>TERMINAL BATTLE</div>
+        <div style={{fontSize:"12px",color:"#404040",textAlign:"center",marginBottom:"14px"}}>WIN vs LIN — WHO TYPES FASTER?</div>
+        <label style={S.lbl}>Username:</label>
+        <input style={S.inp} value={nameInput} onChange={e=>setNameInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&netMode==="solo")startSoloGame();}} placeholder="enter callsign..." maxLength={16} autoFocus/>
+        <label style={S.lbl}>Side:</label>
+        <div style={S.bGroup}>
+          <button style={S.btn(pSide==="windows","x")} onClick={()=>setPSide("windows")}>⊞ Windows CMD</button>
+          <button style={S.btn(pSide==="linux","x")} onClick={()=>setPSide("linux")}>$ Linux Bash</button>
+        </div>
+        {netMode==="solo"&&<><label style={S.lbl}>Difficulty:</label>
+        <div style={S.bGroup}>{Object.entries(DIFF_CONFIG).map(([k,v])=><button key={k} style={S.btn(diff===k,v.col)} onClick={()=>setDiff(k)}>{v.label}</button>)}</div></>}
+        <label style={S.lbl}>Visual Theme:</label>
+        <div style={S.bGroup}>
+          <button style={S.btn(vTheme==="matrix","x")} onClick={()=>setVTheme("matrix")}>▓ Matrix</button>
+          <button style={S.btn(vTheme==="retro","x")} onClick={()=>setVTheme("retro")}>⊞ Retro</button>
+        </div>
+        <label style={S.lbl}>Sound Theme:</label>
+        <div style={S.bGroup}>
+          <button style={S.btn(sTheme==="hacker","x")} onClick={()=>setSTheme("hacker")}>⌨ Hacker</button>
+          <button style={S.btn(sTheme==="retro","x")} onClick={()=>setSTheme("retro")}>🔊 Retro</button>
+        </div>
+        <label style={S.lbl}>Mode:</label>
+        <div style={S.bGroup}>
+          <button style={S.btn(netMode==="solo","x")} onClick={()=>setNetMode("solo")}>🤖 vs AI</button>
+          <button style={S.btn(netMode==="multi","x")} onClick={()=>setNetMode("multi")}>🌐 Multiplayer</button>
+        </div>
+        {netMode==="multi"&&multiForm}
+        {netMode==="solo"&&<button style={S.startBtn} onClick={startSoloGame}>[ OK — Start vs AI ]</button>}
+        <button style={{width:"100%",padding:"4px",background:"#c0c0c0",color:"#000080",fontSize:"12px",cursor:"pointer",fontFamily:"inherit",border:"none",marginTop:"4px",...raised}} onClick={()=>setPhase("guide")}>[ Command Guide ]</button>
+        <div style={{marginTop:"8px",color:"#404040",fontSize:"10px",textAlign:"center"}}>Race to complete CLI tasks · Highest score wins</div>
+      </div>
+    ):(
+      <>
+        <div style={{textAlign:"center",marginBottom:"14px",userSelect:"none",fontFamily:"'Fira Code',Consolas,monospace"}}>
+          <div style={{fontSize:"28px",fontWeight:"bold",letterSpacing:"0.45em",color:"#00ff41",textShadow:"0 0 18px #00ff41, 0 0 36px #00ff4150",animation:"mglow 2s ease-in-out infinite",lineHeight:"1.1"}}>TERMINAL</div>
+          <div style={{fontSize:"17px",fontWeight:"300",letterSpacing:"0.85em",color:"#00ff41b0",textShadow:"0 0 10px #00ff41",animation:"mglow 2s ease-in-out infinite",lineHeight:"1.4",paddingLeft:"0.85em"}}>BATTLE</div>
+        </div>
+        <div style={{color:"#2a6a2a",fontSize:"11px",textAlign:"center",marginBottom:"18px",letterSpacing:"0.15em"}}>— WIN vs LIN · HIGHEST SCORE WINS —</div>
+        <label style={S.lbl}>ENTER YOUR USERNAME:</label>
+        <input style={S.inp} value={nameInput} onChange={e=>setNameInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&netMode==="solo")startSoloGame();}} placeholder="type your callsign..." maxLength={16} autoFocus/>
+        <label style={S.lbl}>SELECT YOUR SIDE:</label>
+        <div style={S.bGroup}>
+          <button style={S.btn(pSide==="windows","#60a5fa")} onClick={()=>setPSide("windows")}>⊞ WINDOWS CMD</button>
+          <button style={S.btn(pSide==="linux","#4ade80")} onClick={()=>setPSide("linux")}>$ LINUX BASH</button>
+        </div>
+        {netMode==="solo"&&<><label style={S.lbl}>SELECT DIFFICULTY:</label>
+        <div style={S.bGroup}>{Object.entries(DIFF_CONFIG).map(([k,v])=><button key={k} style={S.btn(diff===k,v.col)} onClick={()=>setDiff(k)}>{v.label}</button>)}</div></>}
+        <label style={S.lbl}>VISUAL / SOUND THEME:</label>
+        <div style={S.bGroup}>
+          <button style={S.btn(vTheme==="matrix","#00ff41")} onClick={()=>setVTheme("matrix")}>▓ MATRIX</button>
+          <button style={S.btn(vTheme==="retro","#60a5fa")} onClick={()=>setVTheme("retro")}>⊞ RETRO</button>
+          <button style={S.btn(sTheme==="hacker","#00ff41")} onClick={()=>setSTheme("hacker")}>⌨ HACKER SFX</button>
+          <button style={S.btn(sTheme==="retro","#60a5fa")} onClick={()=>setSTheme("retro")}>🔊 RETRO SFX</button>
+        </div>
+        <label style={S.lbl}>GAME MODE:</label>
+        <div style={S.bGroup}>
+          <button style={S.btn(netMode==="solo","#4ade80")} onClick={()=>setNetMode("solo")}>🤖 VS AI</button>
+          <button style={S.btn(netMode==="multi","#f472b6")} onClick={()=>setNetMode("multi")}>🌐 MULTIPLAYER</button>
+        </div>
+        {netMode==="multi"&&<div style={{border:"1px solid #f472b620",background:"#0d001a",padding:"12px",borderRadius:"2px",marginBottom:"12px"}}>{multiForm}</div>}
+        {netMode==="solo"&&(
+          <button style={S.startBtn} onClick={startSoloGame}
+            onMouseOver={e=>e.target.style.background="#002a00"}
+            onMouseOut={e=>e.target.style.background="#001a00"}>
+            [ INITIALIZE BATTLE ]
+          </button>
+        )}
+        <button style={{width:"100%",padding:"7px",background:"transparent",border:"1px solid #2a5a2a",color:"#3a8a3a",fontSize:"11px",letterSpacing:"0.15em",cursor:"pointer",marginTop:"6px",fontFamily:"inherit",transition:"all 0.2s"}}
+          onMouseOver={e=>{e.target.style.borderColor="#4ade80";e.target.style.color="#4ade80";}}
+          onMouseOut={e=>{e.target.style.borderColor="#2a5a2a";e.target.style.color="#3a8a3a";}}
+          onClick={()=>setPhase("guide")}>
+          [ COMMAND GUIDE ]
+        </button>
+        <div style={{marginTop:"10px",color:"#2a5a2a",fontSize:"10px",textAlign:"center",letterSpacing:"0.1em"}}>
+          RACE TO COMPLETE CLI TASKS · HIGHEST SCORE WINS
+        </div>
+      </>
+    );
+    return(
+      <div style={S.root}><Overlay/>
+        <div style={S.lWrap}>
+          <div style={S.lBox}>
+            {isRetro?<WinChrome label="⊞  Terminal Battle v2.0 — Setup" onClose={()=>{}}/>:null}
+            {inner}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  /* ════════════ GUIDE ════════════ */
+  if(phase==="guide"){
+    const CMDS=[
+      {cat:"NAVIGATION",items:[
+        {win:"cd",lin:"pwd",desc:"Print current directory path"},
+        {win:"cd ..",lin:"cd ..",desc:"Go up one directory level"},
+        {win:"dir",lin:"ls",desc:"List files and folders in current directory"},
+        {win:"cls",lin:"clear",desc:"Clear all text from the terminal screen"},
+      ]},
+      {cat:"FILE OPERATIONS",items:[
+        {win:"echo > filename",lin:"touch filename",desc:"Create a new empty file"},
+        {win:"del filename",lin:"rm filename",desc:"Delete a file permanently"},
+        {win:"type filename",lin:"cat filename",desc:"Display contents of a file"},
+        {win:"copy src dest/",lin:"cp src dest/",desc:"Copy a file to another location"},
+        {win:"move src dest/",lin:"mv src dest/",desc:"Move a file to another location"},
+        {win:"ren old new",lin:"mv old new",desc:"Rename a file"},
+        {win:"echo text >> file",lin:"echo text >> file",desc:"Append text to end of file"},
+      ]},
+      {cat:"DIRECTORIES",items:[
+        {win:"mkdir dirname",lin:"mkdir dirname",desc:"Create a new directory"},
+        {win:"rmdir /s /q dir",lin:"rm -rf dir",desc:"Delete a directory and all its contents"},
+      ]},
+      {cat:"SYSTEM INFO",items:[
+        {win:"whoami",lin:"whoami",desc:"Show the currently logged-in username"},
+        {win:"hostname",lin:"hostname",desc:"Show the computer's network name"},
+        {win:"date",lin:"date",desc:"Show current system date and time"},
+        {win:"set",lin:"printenv",desc:"List all environment variables"},
+        {win:"tasklist",lin:"ps aux",desc:"Show all running processes with PIDs"},
+        {win:"ipconfig",lin:"ip addr",desc:"Show network interfaces and IP addresses"},
+        {win:"netstat -an",lin:"ss -an",desc:"Show all active network connections"},
+        {win:"dir /s",lin:"df -h",desc:"Show disk space usage"},
+        {win:"where git",lin:"which git",desc:"Find the install path of an executable"},
+        {win:"arp -a",lin:"arp -a",desc:"Show ARP cache — IP to MAC mappings"},
+        {win:"route print",lin:"ip route",desc:"Display the IP routing table"},
+      ]},
+      {cat:"SEARCH & COMPARE",items:[
+        {win:'findstr "kw" file',lin:'grep "kw" file',desc:"Search for a keyword inside a file"},
+        {win:"fc file1 file2",lin:"diff file1 file2",desc:"Compare two files line by line"},
+      ]},
+      {cat:"PROCESSES & NETWORK",items:[
+        {win:"taskkill /IM app.exe",lin:"pkill app",desc:"Terminate a running process by name"},
+        {win:"ping domain.com",lin:"ping domain.com",desc:"Test connectivity to a host"},
+        {win:"tracert domain.com",lin:"traceroute domain.com",desc:"Trace network hops to a host"},
+        {win:"nslookup domain.com",lin:"dig domain.com",desc:"Query DNS records for a domain"},
+      ]},
+    ];
+    const thGreen="#00ff41"; const dimGreen="#1a4a1a"; const midGreen="#2a6a2a";
+    return(
+      <div style={{fontFamily:"'Fira Code',Consolas,monospace",background:"#050505",height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden",position:"relative"}}>
+        <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:999,background:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)"}}/>
+        <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:998,background:"radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.85) 100%)"}}/>
+        {/* header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderBottom:"1px solid #1a2a1a",background:"#000",flexShrink:0}}>
+          <button onClick={()=>setPhase("login")} style={{background:"transparent",border:"1px solid #1a3a1a",color:"#4ade80",padding:"4px 12px",fontSize:"11px",cursor:"pointer",letterSpacing:"0.1em",fontFamily:"inherit"}}>← BACK</button>
+          <div style={{fontSize:"14px",letterSpacing:"0.2em",color:thGreen,textShadow:"0 0 8px "+thGreen}}>COMMAND GUIDE</div>
+          <div style={{width:"80px"}}/>
+        </div>
+        {/* two-column scroll area */}
+        <div style={{flex:1,overflowY:"auto",padding:"12px 16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px",alignContent:"start"}}>
+          {/* column header */}
+          <div style={{gridColumn:"1/-1",display:"grid",gridTemplateColumns:"1fr 1fr 1fr 2fr",gap:"0",borderBottom:"1px solid "+dimGreen,paddingBottom:"4px",marginBottom:"2px"}}>
+            {["TIER","WINDOWS CMD","LINUX BASH","WHAT IT DOES"].map((h,i)=>(
+              <div key={i} style={{fontSize:"9px",letterSpacing:"0.15em",color:dimGreen,padding:"0 6px"}}>{h}</div>
+            ))}
+          </div>
+          {CMDS.map((cat,ci)=>(
+            <div key={ci} style={{gridColumn:"1/-1"}}>
+              {/* category heading */}
+              <div style={{fontSize:"10px",letterSpacing:"0.2em",color:thGreen,textShadow:"0 0 6px "+thGreen+"80",borderLeft:"2px solid "+thGreen,paddingLeft:"8px",marginBottom:"6px",marginTop:ci>0?"10px":"2px"}}>{cat.cat}</div>
+              {cat.items.map((r,ri)=>(
+                <div key={ri} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 2fr",gap:"0",marginBottom:"3px",background:ri%2===0?"#050505":"#000",borderRadius:"1px"}}>
+                  <div style={{padding:"3px 6px",fontSize:"9px",color:dimGreen,letterSpacing:"0.05em",display:"flex",alignItems:"center"}}>
+                    <span style={{display:"inline-block",width:"6px",height:"6px",borderRadius:"50%",background:ri<4?"#4ade80":ri<7?"#60a5fa":ri<10?"#fb923c":"#f43f5e",marginRight:"5px",flexShrink:0}}/>
+                  </div>
+                  <div style={{padding:"3px 6px",fontSize:"10.5px",color:"#e0e0e0",fontFamily:"'Fira Code',monospace"}}>{r.win}</div>
+                  <div style={{padding:"3px 6px",fontSize:"10.5px",color:thGreen,fontFamily:"'Fira Code',monospace",textShadow:"0 0 4px "+thGreen+"40"}}>{r.lin}</div>
+                  <div style={{padding:"3px 6px",fontSize:"10px",color:"#556655",lineHeight:"1.4"}}>{r.desc}</div>
+                </div>
+              ))}
+            </div>
+          ))}
+          {/* free commands note */}
+          <div style={{gridColumn:"1/-1",marginTop:"14px",padding:"10px 12px",border:"1px solid "+dimGreen,background:"#000805",borderRadius:"2px"}}>
+            <div style={{fontSize:"10px",letterSpacing:"0.15em",color:thGreen,marginBottom:"6px"}}>FREE COMMANDS</div>
+            <div style={{fontSize:"10px",color:"#4ade80",lineHeight:"1.7"}}>
+              These commands always work at any time, even when they're not your current task:<br/>
+              <span style={{color:"#e0e0e0"}}>Windows: </span><span style={{color:"#aaa"}}>cls · dir · date · whoami · hostname · cd · cd..</span><br/>
+              <span style={{color:"#e0e0e0"}}>Linux: </span><span style={{color:"#aaa"}}>clear · ls · date · whoami · hostname · pwd · cd..</span>
+            </div>
+          </div>
+          {/* scoring note */}
+          <div style={{gridColumn:"1/-1",marginTop:"6px",padding:"10px 12px",border:"1px solid #1a2030",background:"#00040d",borderRadius:"2px"}}>
+            <div style={{fontSize:"10px",letterSpacing:"0.15em",color:"#60a5fa",marginBottom:"6px"}}>SPECIAL COMMANDS DURING BATTLE</div>
+            <div style={{fontSize:"10px",color:"#60a5fa80",lineHeight:"1.8"}}>
+              <span style={{color:"#fb923c",fontFamily:"'Fira Code',monospace"}}>skip</span><span style={{color:"#555"}}> — skip current task, costs </span><span style={{color:"#fb923c"}}>−1 point</span><br/>
+              <span style={{color:"#fb923c",fontFamily:"'Fira Code',monospace"}}>help</span><span style={{color:"#555"}}> — reveal a partial hint for current task, costs </span><span style={{color:"#fb923c"}}>−0.5 points</span><br/>
+              <span style={{color:"#555",fontSize:"9px"}}>Winning is determined by score. Finishing all tasks locks in your score. Highest score wins — even if opponent finishes first.</span>
+            </div>
+          </div>
+          <div style={{gridColumn:"1/-1",height:"20px"}}/>
+        </div>
+      </div>
+    );
+  }
+
+  /* ════════════ LOBBY ════════════ */
+  if(phase==="lobby"){
+    const isHosting=lobbyStatus==="hosting"||lobbyStatus==="finding";
+    const isErr=lobbyStatus==="error";
+    const spinnerStyle={display:"inline-block",width:"14px",height:"14px",border:"2px solid #00ff4140",borderTop:"2px solid #00ff41",borderRadius:"50%",animation:"spin 0.8s linear infinite",verticalAlign:"middle",marginRight:"8px"};
+    const shareURL=roomCode&&roomCode!=="QUEUE"?buildJoinURL(roomCode):"";
+    const lobbyContent=(
+      <div style={{padding:isRetro?"14px 18px":"0"}}>
+        <div style={{marginBottom:"14px"}}>
+          <div style={{fontSize:isRetro?"13px":"11px",color:isRetro?"#000080":"#60a5fa",letterSpacing:"0.1em",marginBottom:"6px"}}>
+            {isRetro?"Status:":"STATUS:"}
+          </div>
+          <div style={{fontSize:isRetro?"14px":"13px",color:isRetro?"#000":"#00ff41",display:"flex",alignItems:"center"}}>
+            {!isErr&&<span style={isRetro?{}:spinnerStyle}/>}
+            {lobbyMsg||"Initializing..."}
+          </div>
+        </div>
+        {roomCode&&roomCode!=="QUEUE"&&(
+          <div style={{marginBottom:"14px"}}>
+            <div style={{fontSize:isRetro?"11px":"10px",color:isRetro?"#000080":"#1a4a1a",letterSpacing:"0.08em",marginBottom:"4px"}}>
+              {isRetro?"Your Room Code:":"ROOM CODE:"}
+            </div>
+            <div style={{fontSize:isRetro?"32px":"28px",letterSpacing:"0.4em",color:isRetro?"#000080":"#00ff41",textShadow:isRetro?"none":"0 0 20px #00ff4180",fontWeight:"bold",marginBottom:"8px"}}>{roomCode}</div>
+            {shareURL&&(
+              <button style={{...S.btn(false,isRetro?"x":"#60a5fa"),marginBottom:"6px",fontSize:"10px"}}
+                onClick={()=>{navigator.clipboard?.writeText(shareURL).then(()=>{}).catch(()=>{});alert("Link copied!\n"+shareURL);}}>
+                {isRetro?"[ Copy Join Link ]":"⧉ COPY JOIN LINK"}
+              </button>
+            )}
+          </div>
+        )}
+        <div style={{display:"flex",gap:"8px",flexWrap:"wrap",marginTop:"12px"}}>
+          {isHosting&&(
+            <button style={{padding:"6px 14px",border:"1px solid #fb923c",color:"#fb923c",background:"transparent",fontSize:"11px",cursor:"pointer",letterSpacing:"0.1em",fontFamily:"inherit"}}
+              onClick={()=>{clearTimeout(aiFallbackTmr.current);cleanupPeer();isMultiRef.current=false;startSoloGame();}}>
+              ⚡ PLAY VS AI INSTEAD
+            </button>
+          )}
+          <button style={{padding:"6px 14px",border:"1px solid #555",color:"#ccc",background:"#111",fontSize:"11px",cursor:"pointer",letterSpacing:"0.1em",fontFamily:"inherit"}}
+            onClick={()=>{cleanupPeer();setLobbyStatus("idle");setPhase("login");}}>
+            ← MENU
+          </button>
+        </div>
+      </div>
+    );
+    return(
+      <div style={S.root}><Overlay/>
+        <div style={S.lWrap}>
+          <div style={S.lBox}>
+            {isRetro?<WinChrome label="⊞  Terminal Battle — Lobby" onClose={()=>{cleanupPeer();setPhase("login");}}/>:null}
+            {!isRetro&&<div style={{fontSize:"11px",letterSpacing:"0.15em",color:"#00ff41",textShadow:"0 0 8px #00ff41",marginBottom:"16px",textAlign:"center"}}>LOBBY</div>}
+            {lobbyContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ════════════ GAMEOVER ════════════ */
+  if(phase==="gameover"){
+    const isDisconn=winner==="disconnect";
+    const won=winner==="player";
+    const col=isRetro?(won?"#000080":"#cc0000"):(won?"#00ff41":"#f43f5e");
+    /* particle burst chars */
+    const BURST_CHARS="01><$#@!%&*[]{}|/\\~^";
+    const burstItems=Array.from({length:28},(_,i)=>({
+      id:i,
+      char:BURST_CHARS[Math.floor(Math.random()*BURST_CHARS.length)],
+      x:20+Math.random()*60,  // vw %
+      delay:Math.random()*0.6,
+      dur:0.9+Math.random()*0.8,
+      col:won?"#00ff41":"#f43f5e"
+    }));
+    return(
+      <div style={S.root}><Overlay/>
+      {/* particle burst */}
+      {!isDisconn&&burstItems.map(p=>(
+        <div key={p.id} style={{
+          position:"fixed",left:p.x+"vw",top:"-20px",
+          fontSize:"14px",fontFamily:"'Fira Code',Consolas,monospace",
+          color:p.col,opacity:0,pointerEvents:"none",zIndex:990,
+          textShadow:"0 0 6px "+p.col,
+          animation:`fall ${p.dur}s ${p.delay}s ease-in forwards`
+        }}>{p.char}</div>
+      ))}
+
+        <div style={S.goWrap}>
+        <div style={{...S.goBox(won),animation:"goentry 0.45s ease-out",position:"relative",overflow:"hidden"}}>
+            {isRetro&&<WinChrome label="⊞ Battle Result" onClose={()=>{}}/>}
+            <div style={{padding:isRetro?"16px 0 0 0":"0"}}>
+              <div style={{fontSize:isRetro?"12px":"10px",letterSpacing:"0.2em",color:col,marginBottom:"10px"}}>
+                {isDisconn?"BATTLE ENDED":"BATTLE COMPLETE"}
+              </div>
+              {/* main title with glitch layers */}
+              <div style={{position:"relative",marginBottom:"8px",display:"inline-block"}}>
+                <div style={{fontSize:isRetro?"26px":"32px",fontWeight:"bold",color:col,
+                  textShadow:isRetro?"none":(won?"0 0 30px "+col+",0 0 60px "+col+"60":"0 0 20px "+col),
+                  animation:won?"victpulse 2s ease-in-out infinite":"flash 1.2s ease-in-out infinite"}}>
+                  {isDisconn?"DISCONNECTED":won?"VICTORY":"DEFEATED"}
+                </div>
+                {!isRetro&&!won&&!isDisconn&&<>
+                  <div style={{position:"absolute",inset:0,fontSize:"32px",fontWeight:"bold",
+                    color:"#f43f5e",animation:"glitch1 2.5s step-end infinite",pointerEvents:"none"}}>DEFEATED</div>
+                  <div style={{position:"absolute",inset:0,fontSize:"32px",fontWeight:"bold",
+                    color:"#60a5fa",animation:"glitch2 2.5s step-end infinite 0.1s",pointerEvents:"none"}}>DEFEATED</div>
+                </>
+                }
+              </div>
+              {isDisconn&&<div style={{fontSize:"12px",color:isRetro?"#404040":"#555",marginBottom:"16px"}}>Opponent disconnected.</div>}
+              {!isDisconn&&<>
+                <div style={{fontSize:isRetro?"12px":"13px",color:isRetro?"#404040":"#555",marginBottom:"24px"}}>
+                  {won?`${playerName} wins with ${fmt(pScore)} pts`:`${opponentName} scored ${fmt(aiScore)} · You scored ${fmt(pScore)}`}
+                </div>
+                <div style={{display:"flex",justifyContent:"center",gap:"30px",marginBottom:"28px"}}>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:"10px",color:isRetro?"#000080":"#aaa",letterSpacing:"0.1em"}}>{playerName}</div>
+                    <div style={{fontSize:"28px",color:isRetro?(won?"#000080":"#800000"):(pSide==="linux"?linGlow:winGlow)}}>{fmt(pScore)}</div>
+                  </div>
+                  <div style={{fontSize:"24px",color:isRetro?"#606060":"#3a6a3a",paddingTop:"8px"}}>vs</div>
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:"10px",color:isRetro?"#000080":"#aaa",letterSpacing:"0.1em"}}>{opponentName}</div>
+                    <div style={{fontSize:"28px",color:isRetro?(!won?"#000080":"#800000"):(opponentSide==="linux"?linGlow:winGlow)}}>{fmt(aiScore)}</div>
+                  </div>
+                </div>
+              </>}
+              {/* ── Post-game breakdown ── */}
+              {!isDisconn&&taskLogRef.current.length>0&&(
+                <div style={{margin:"12px 0 16px 0",maxHeight:"160px",overflowY:"auto",borderTop:"1px solid #1a2a1a",paddingTop:"8px"}}>
+                  <div style={{fontSize:isRetro?"10px":"9px",letterSpacing:"0.1em",color:isRetro?"#000080":"#555",marginBottom:"4px"}}>TASK BREAKDOWN</div>
+                  {taskLogRef.current.map((t,i)=>(
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:isRetro?"11px":"9.5px",padding:"2px 0",borderBottom:isRetro?"1px solid #bbb":"1px solid #111",
+                      color:t.result==="done"?(isRetro?"#000080":"#00ff4190"):t.result==="skip"?(isRetro?"#804000":"#fb923c80"):"#333"}}>
+                      <span style={{maxWidth:"70%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{i+1}. {t.desc}</span>
+                      <span>{t.result==="done"?("✓ "+(t.timeMs/1000).toFixed(1)+"s"):t.result==="skip"?"SKIP":"—"}</span>
+                    </div>
+                  ))}
+                  {peakStreakRef.current>=3&&<div style={{fontSize:"9px",color:isRetro?"#804000":"#fb923c",marginTop:"4px"}}>🔥 Peak streak: {peakStreakRef.current}</div>}
+                </div>
+              )}
+              {/* ── Buttons / rematch flow ── */}
+              {rematchReq==="received"?(
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontSize:isRetro?"12px":"10px",color:isRetro?"#000080":"#60a5fa",marginBottom:"8px",letterSpacing:"0.1em"}}>Opponent wants a rematch</div>
+                  <div style={{display:"flex",gap:"8px",justifyContent:"center"}}>
+                    <button style={{...S.startBtn,width:"auto",padding:isRetro?"5px 22px":"8px 28px"}}
+                      onClick={()=>{netSend({type:"rematch_acc"});cleanupPeer();setRematchReq(null);setPhase("login");setLobbyStatus("idle");}}>
+                      {isRetro?"[ Accept ]":"ACCEPT"}
+                    </button>
+                    <button style={{...S.btn(false,isRetro?"x":"#f43f5e"),padding:isRetro?"5px 22px":"8px 28px",fontSize:isRetro?"13px":"11px"}}
+                      onClick={()=>{netSend({type:"rematch_dec"});setRematchReq(null);}}>
+                      {isRetro?"[ Decline ]":"DECLINE"}
+                    </button>
+                  </div>
+                </div>
+              ):(
+                <div style={{display:"flex",gap:"8px",justifyContent:"center",flexDirection:"column",alignItems:"center"}}>
+                  {rematchReq==="sent"&&<div style={{fontSize:"9px",color:isRetro?"#808080":"#555",letterSpacing:"0.1em",marginBottom:"4px"}}>Waiting for opponent...</div>}
+                  {rematchReq==="declined"&&<div style={{fontSize:"9px",color:isRetro?"#cc0000":"#f43f5e",letterSpacing:"0.1em",marginBottom:"4px"}}>Rematch declined.</div>}
+                  <div style={{display:"flex",gap:"8px"}}>
+                    <button style={{...S.startBtn,width:"auto",padding:isRetro?"5px 22px":"8px 28px"}}
+                      onClick={()=>{gameActive.current=false;clearTimeout(aiTimer.current);cleanupPeer();isMultiRef.current=false;setRematchReq(null);setPhase("login");setLobbyStatus("idle");setConnStatus("");}}>
+                      {isRetro?"[ Menu ]":"MENU"}
+                    </button>
+                    {isMultiRef.current&&rematchReq!=="sent"&&(
+                      <button style={{...S.btn(false,isRetro?"x":"#60a5fa"),padding:isRetro?"5px 22px":"8px 28px",fontSize:isRetro?"13px":"11px"}}
+                        onClick={()=>{netSend({type:"rematch_req"});setRematchReq("sent");}}>
+                        {isRetro?"[ Rematch? ]":"REMATCH?"}
+                      </button>
+                    )}
+                    {!isMultiRef.current&&(
+                      <button style={{...S.btn(false,isRetro?"x":"#60a5fa"),padding:isRetro?"5px 22px":"8px 28px",fontSize:isRetro?"13px":"11px"}}
+                        onClick={()=>{gameActive.current=false;clearTimeout(aiTimer.current);startSoloGame();}}>
+                        {isRetro?"[ Rematch ]":"REMATCH"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ════════════ GAME ════════════ */
+  return(
+    <div style={{...S.root,animation:shake?"shake 0.4s ease-in-out":"none"}}>
+      <Overlay/>
+      {/* HEADER */}
+      <div style={S.header}>
+        <div style={S.badge(pSide==="linux"?linGlow:winGlow)}>
+          {playerName} · {fmt(pScore)}/{tasks.length}
+          {isMultiRef.current&&<span style={{fontSize:"9px",opacity:0.6,marginLeft:"4px"}}>🌐</span>}
+        </div>
+        <div style={S.logo}>
+          {isRetro?<span>WIN ⚔ LIN</span>:<><span style={{color:winGlow,textShadow:"0 0 6px "+winGlow}}>WIN</span><span style={{color:"#1a3a1a",margin:"0 8px"}}>⚔</span><span style={{color:linGlow,textShadow:"0 0 10px "+linGlow}}>LIN</span></>}
+        </div>
+        <div style={S.badge(opponentSide==="linux"?linGlow:winGlow)}>
+          {opponentName} · {aiScore}/{tasks.length}
+          {isMultiRef.current&&<span style={{fontSize:"9px",opacity:0.6,marginLeft:"4px"}}>🌐</span>}
+        </div>
+      </div>
+      {/* PANELS */}
+      <div style={S.panels}>
+        {/* PLAYER — always LEFT, styled by their chosen side */}
+        {(()=>{
+          const isW=pSide==="windows";
+          const gl=isW?winGlow:linGlow;
+          const pc=isW?(isRetro?"#c0c0c0":"#909090"):(isRetro?"#00cc00":"#00cc33");
+          const cc=isW?(isRetro?"#fff":"#e0e0e0"):(isRetro?"#00ff00":"#00ff41");
+          return(
+            <div style={S.tWrap(gl)}>
+              {isRetro?<WinChrome label={isW?"⊞  C:\\> — YOU":"$  bash — YOU"}/>:<div style={S.tHdr(gl)}>{isW?"⊞ WINDOWS CMD":"$ LINUX BASH"} · YOU</div>}
+              <div style={S.tBody} ref={pTermRef}>
+                {renderHist(pHist,pc,cc)}
+                {(()=>{const before=pInput.slice(0,cursorPos);const after=pInput.slice(cursorPos);return(<div><span style={{color:pc}}>{pPrompt} </span><span style={{color:cc}}>{before}</span><span style={S.cur(gl)}/><span style={{color:cc}}>{after}</span></div>);})()}
+              </div>
+            </div>
+          );
+        })()}
+        {/* MIDDLE */}
+        <div style={S.mWrap}>
+          {isRetro?<WinChrome label="📋  Tasks"/>:<div style={S.mTitle}>TASKS</div>}
+          <div style={{flex:1,overflowY:"auto",padding:"4px",background:isRetro?"#c0c0c0":"transparent"}}>
+            {tasks.map((t,i)=>{
+              const st=getState(i,pTaskIdx,aiTaskIdx);
+              return <div key={t.id} style={S.tItem(st)}>{st==="done"||st==="ai-done"?"✓ ":st==="active"?"▶ ":"  "}{t.desc}</div>;
+            })}
+          </div>
+          <div style={S.mFoot}>
+            <div style={{fontSize:isRetro?"10px":"9px",color:isRetro?"#000080":"#1a4a1a",letterSpacing:"0.08em",marginBottom:"2px"}}>{isRetro?"Current Task:":"CURRENT TASK:"}</div>
+            <div style={{fontSize:isRetro?"12px":"10.5px",color:isRetro?"#000080":"#60a5fa",textShadow:isRetro?"none":"0 0 6px #3b82f660",marginBottom:hint?"4px":"0"}}>
+              {pTaskIdx<tasks.length?tasks[pTaskIdx].desc:"ALL DONE!"}
+            </div>
+            {hint&&<div style={{fontSize:isRetro?"11px":"10px",color:isRetro?"#804000":"#fb923c",letterSpacing:"0.05em"}}>⚑ {hint}</div>}
+            <div style={{display:"flex",gap:"8px",marginTop:"4px",fontSize:isRetro?"10px":"9px",color:isRetro?"#808080":"#1a3a1a"}}>
+              <span style={{color:isRetro?"#804000":"#fb923ca0"}}>skip</span><span>−1pt</span><span>·</span>
+              <span style={{color:isRetro?"#804000":"#fb923ca0"}}>help</span><span>−0.5pt</span>
+            </div>
+            {streak>=2&&<div style={{marginTop:"4px",fontSize:isRetro?"11px":"9px",color:isRetro?"#804000":"#fb923c",animation:"spulse 1.2s ease-in-out infinite",letterSpacing:"0.08em"}}>🔥 {streak}x STREAK{streak>=3?" +bonus":""}</div>}
+          </div>
+        </div>
+        {/* OPPONENT — always RIGHT, styled by their chosen side */}
+        {(()=>{
+          const isW=opponentSide==="windows";
+          const gl=isW?winGlow:linGlow;
+          const pc=isW?(isRetro?"#c0c0c0":"#909090"):(isRetro?"#00cc00":"#00cc33");
+          const cc=isW?(isRetro?"#fff":"#e0e0e0"):(isRetro?"#00ff00":"#00ff41");
+          return(
+            <div style={{...S.tWrap(gl),animation:opFlash?"opflash 0.6s ease-out":"none"}}>
+              {isRetro?<WinChrome label={(isW?"⊞  C:\\> — ":"$  bash — ")+opponentName+(isMultiRef.current?" 🌐":"")}/>
+                      :<div style={S.tHdr(gl)}>{isW?"⊞ WINDOWS CMD":"$ LINUX BASH"} · {opponentName}{isMultiRef.current?" 🌐":""}</div>}
+              <div style={S.tBody} ref={opTermRef}>
+                {renderHist(opHist,pc,cc)}
+                <div><span style={{color:pc}}>{opPrompt} </span><span style={{color:cc}}>{aiTyping}</span><span style={S.cur(gl)}/></div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+      {/* COUNTDOWN OVERLAY */}
+      {countdown!==null&&(
+        <div style={{position:"fixed",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.78)",zIndex:1000,pointerEvents:"all"}}>
+          {countdown>0?(
+            <div style={{fontSize:"120px",fontWeight:"bold",color:countdown===3?"#f43f5e":countdown===2?"#fb923c":"#00ff41",
+              textShadow:"0 0 40px currentColor",animation:"cdpop 0.35s ease-out",fontFamily:"'Fira Code',Consolas,monospace",lineHeight:1}}>
+              {countdown}
+            </div>
+          ):(
+            <div style={{fontSize:"72px",fontWeight:"bold",color:"#fff",letterSpacing:"0.3em",
+              textShadow:"0 0 30px #ffffff80",animation:"goshow 0.3s ease-out",fontFamily:"'Fira Code',Consolas,monospace"}}>
+              GO!
+            </div>
+          )}
+          <div style={{fontSize:"12px",color:"#ffffff40",marginTop:"16px",letterSpacing:"0.3em"}}>GET READY</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
