@@ -67,7 +67,7 @@ const TASK_POOL=[
   {tier:2,fn:()=>{const a=rFile(),b=rFile();return{desc:`Rename '${a}' to '${b}'`,win:`ren ${a} ${b}`,lin:`mv ${a} ${b}`,winOut:"",linOut:""}}},
   {tier:2,fn:()=>{const f=rFile(),d=rDir();return{desc:`Copy '${f}' into '${d}/'`,win:`copy ${f} ${d}/`,lin:`cp ${f} ${d}/`,winOut:"        1 file(s) copied.",linOut:""}}},
   {tier:2,fn:()=>{const f=rFile(),d=rDir();return{desc:`Move '${f}' into '${d}/'`,win:`move ${f} ${d}/`,lin:`mv ${f} ${d}/`,winOut:"        1 file(s) moved.",linOut:""}}},
-  {tier:2,fn:()=>{const f=rFile();return{desc:`Append a line of text to '${f}'`,win:`echo more >> ${f}`,lin:`echo more >> ${f}`,winOut:"",linOut:""}}},
+  {tier:2,fn:()=>{const f=rFile();const words=["hello","data","entry","log","info","text","note"];const w=pick(words);return{desc:`Append '${w}' to '${f}'`,win:`echo ${w} >> ${f}`,lin:`echo ${w} >> ${f}`,winOut:"",linOut:""}}},
   {tier:2,fn:()=>{const d=rDir();return{desc:`Force-delete directory '${d}' and all contents`,win:`rmdir /s /q ${d}`,lin:`rm -rf ${d}`,winOut:"",linOut:""}}},
   {tier:2,fn:()=>({desc:"List all running processes",win:"tasklist",lin:"ps aux",winOut:"System     4  Services  0K\nchrome.exe  9832  Console  148K",linOut:"root    1  0.0  bash\nplayer  1234  1.2  chrome"})},
   {tier:2,fn:()=>({desc:"List all environment variables",win:"set",lin:"printenv",winOut:"PATH=C:\\Windows\\system32\nOS=Windows_NT\nUSERNAME=Player",linOut:"PATH=/usr/local/bin\nSHELL=/bin/bash\nUSER=player"})},
@@ -82,6 +82,28 @@ const TASK_POOL=[
   {tier:4,fn:()=>{const dom=rDomain(),ip=`142.${Math.floor(Math.random()*100)+100}.${Math.floor(Math.random()*50)+10}.${Math.floor(Math.random()*100)+10}`;return{desc:`Trace the network route to ${dom}`,win:`tracert ${dom}`,lin:`traceroute ${dom}`,winOut:`Tracing route to ${dom} [${ip}]\n  1  1ms  192.168.1.1\n  2  14ms ${ip}\nTrace complete.`,linOut:`traceroute to ${dom} (${ip})\n 1  192.168.1.1  0.812 ms\n 2  ${ip}  13.2 ms`}}},
   {tier:4,fn:()=>{const dom=rDomain(),ip=`142.${Math.floor(Math.random()*100)+100}.${Math.floor(Math.random()*50)+10}.${Math.floor(Math.random()*100)+10}`;return{desc:`Look up DNS records for ${dom}`,win:`nslookup ${dom}`,lin:`dig ${dom}`,winOut:`Server:  192.168.1.1\nName:    ${dom}\nAddress: ${ip}`,linOut:`; <<>> DiG <<>> ${dom}\n;; ANSWER SECTION:\n${dom}. 300 IN A ${ip}`}}},
   {tier:4,fn:()=>({desc:"Display the system's ARP cache table",win:"arp -a",lin:"arp -a",winOut:"Interface: 192.168.1.42\n  192.168.1.1   aa-bb-cc-dd-ee-ff  dynamic",linOut:"? (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0"})},
+
+  /* ── TIER 3 EXTRAS — longer flags, paths ── */
+  {tier:3,fn:()=>{const f=rFile(),d=rDir();return{desc:`List files in '${d}/' with details`,win:`dir /a /b ${d}`,lin:`ls -la ${d}/`,winOut:`Directory of C:\\Users\\Player\\${d}\nconfig.ini\nsettings.bak`,linOut:`total 12\ndrwxr-xr-x 2 user user 4096 ${d}\n-rw-r--r-- 1 user user  220 ${f}`}}},
+  {tier:3,fn:()=>{const f=rFile();return{desc:`Show last 20 lines of '${f}'`,win:`more +20 ${f}`,lin:`tail -n 20 ${f}`,winOut:`-- More (98%) --`,linOut:`[last 20 lines of ${f}]`}}},
+  {tier:3,fn:()=>{const f=rFile();return{desc:`Count lines in '${f}'`,win:`find /c /v "" ${f}`,lin:`wc -l ${f}`,winOut:`---------- ${f}: 142`,linOut:`142 ${f}`}}},
+  {tier:3,fn:()=>{const p=rProc();return{desc:`Show process ID of '${p}'`,win:`tasklist /FI "IMAGENAME eq ${p}.exe"`,lin:`pgrep ${p}`,winOut:`${p}.exe  4821 Console  1  45,312 K`,linOut:`4821`}}},
+  {tier:3,fn:()=>{const f=rFile(),d=rDir();return{desc:`Recursively copy '${d}/' to '${d}_backup/'`,win:`xcopy ${d} ${d}_backup /E /I`,lin:`cp -r ${d} ${d}_backup`,winOut:`${d}\\${f}\n1 File(s) copied`,linOut:``}}},
+  {tier:3,fn:()=>{const kw=rKey(),d=rDir();return{desc:`Recursively search for '${kw}' in '${d}/'`,win:`findstr /s /r "${kw}" ${d}\\*`,lin:`grep -r "${kw}" ${d}/`,winOut:`${d}\\app.log:  [ERROR] ${kw} at line 42`,linOut:`${d}/app.log: [ERROR] ${kw} at line 42`}}},
+  {tier:3,fn:()=>{const f=rFile();return{desc:`Sort the contents of '${f}' alphabetically`,win:`sort ${f}`,lin:`sort ${f}`,winOut:`apple\nbanana\nzebra`,linOut:`apple\nbanana\nzebra`}}},
+  {tier:3,fn:()=>{const d=rDir();return{desc:`Show disk usage of '${d}/' folder`,win:`du /s ${d}`,lin:`du -sh ${d}/`,winOut:`4,201,728\t${d}`,linOut:`4.1M\t${d}/`}}},
+  /* ── TIER 4 EXTRAS — complex, long, flags+paths ── */
+  {tier:4,fn:()=>{const f=rFile(),d=rDir();return{desc:`Archive '${d}/' into '${f}.tar.gz'`,win:`tar -czf ${f}.tar.gz ${d}`,lin:`tar -czf ${f}.tar.gz ${d}`,winOut:``,linOut:``}}},
+  {tier:4,fn:()=>{const f=rFile();return{desc:`Extract '${f}.tar.gz' here`,win:`tar -xzf ${f}.tar.gz`,lin:`tar -xzf ${f}.tar.gz`,winOut:``,linOut:``}}},
+  {tier:4,fn:()=>{const f=rFile(),d=rDir();return{desc:`Find all .log files modified in last 7 days in '${d}/'`,win:`forfiles /p ${d} /s /m *.log /d -7`,lin:`find ${d} -name "*.log" -mtime -7`,winOut:`${d}\\error.log\n${d}\\access.log`,linOut:`${d}/error.log\n${d}/access.log`}}},
+  {tier:4,fn:()=>{const ip=`192.168.${Math.floor(Math.random()*5)+1}.${Math.floor(Math.random()*200)+10}`;const f=rFile();return{desc:`Copy '${f}' to remote host ${ip}`,win:`pscp ${f} user@${ip}:/home/user/`,lin:`scp ${f} user@${ip}:/home/user/`,winOut:`${f} | 4 kB | 4.0 kB/s | ETA: 00:00:00 | 100%`,linOut:`${f}  100% 4096  4.0KB/s  00:00`}}},
+  {tier:4,fn:()=>{const dom=rDomain();return{desc:`Download a file from ${dom}`,win:`curl -O https://${dom}/index.html`,lin:`curl -O https://${dom}/index.html`,winOut:`  % Total  % Received\n 100  1024  100  1024    0     0   2048      0`,linOut:`  % Total  % Received\n 100  1024  100  1024    0     0   2048      0`}}},
+  {tier:4,fn:()=>{const dom=rDomain();return{desc:`POST JSON data to ${dom}/api`,win:`curl -X POST https://${dom}/api -H "Content-Type: application/json" -d "{\\"status\\":\\"ok\\"}"`,lin:`curl -X POST https://${dom}/api -H "Content-Type: application/json" -d '{"status":"ok"}'`,winOut:`{"result":"success"}`,linOut:`{"result":"success"}`}}},
+  {tier:4,fn:()=>{const f=rFile();return{desc:`Set '${f}' permissions to 755`,win:`icacls ${f} /grant Everyone:(RX)`,lin:`chmod 755 ${f}`,winOut:`processed file: ${f}\n1 file(s) processed.`,linOut:``}}},
+  {tier:4,fn:()=>{const f=rFile();return{desc:`Change owner of '${f}' to root`,win:`takeown /f ${f}`,lin:`chown root:root ${f}`,winOut:`SUCCESS: The file (or folder): "${f}" now owned by the current user.`,linOut:``}}},
+  {tier:4,fn:()=>{const kw=rKey(),lf=rLog();return{desc:`Count occurrences of '${kw}' in '${lf}'`,win:`findstr /c:"${kw}" ${lf} | find /c /v ""`,lin:`grep -c "${kw}" ${lf}`,winOut:`3`,linOut:`3`}}},
+  {tier:4,fn:()=>{const p=rProc();return{desc:`Kill all instances of '${p}' forcefully`,win:`taskkill /F /IM ${p}.exe /T`,lin:`pkill -9 ${p}`,winOut:`SUCCESS: The process "${p}.exe" with PID 4821 has been terminated.`,linOut:`[1] Killed ${p}`}}},
+  {tier:4,fn:()=>{const f=rFile();const ip=`10.0.${Math.floor(Math.random()*5)}.${Math.floor(Math.random()*200)+10}`;return{desc:`Watch network traffic on port 443`,win:`netstat -an | findstr :443`,lin:`ss -tlnp | grep :443`,winOut:`  TCP    0.0.0.0:443    0.0.0.0:0   LISTENING`,linOut:`LISTEN 0  128  0.0.0.0:443  0.0.0.0:*  users:(("nginx",pid=1234,fd=6))`}}},
   {tier:4,fn:()=>({desc:"Show the current IP routing table",win:"route print",lin:"ip route",winOut:"IPv4 Route Table\n  0.0.0.0  255.255.255.0  192.168.1.1  On-link",linOut:"default via 192.168.1.1 dev eth0\n192.168.1.0/24 dev eth0 proto kernel"})},
 ];
 const DIFF_CONFIG={
@@ -101,14 +123,106 @@ const FREE_WIN={cls:n=>"__CLEAR__",dir:n=>" Volume in drive C has no label.\n Di
 const FREE_LIN={clear:n=>"__CLEAR__",ls:n=>"docs/  src/  notes.txt  backup.dat  README.md",date:n=>new Date().toString(),whoami:n=>n.toLowerCase(),hostname:n=>"player-machine",pwd:n=>"/home/"+n.toLowerCase(),"cd ..":n=>"","cd..":n=>""};
 const WIN_ERRORS=c=>["'"+c+"' is not recognized as an internal or external command,\noperable program or batch file.","The syntax of the command is incorrect."];
 const LIN_ERRORS=c=>["bash: "+c+": command not found","-bash: "+c.split(" ")[0]+": No such file or directory"];
-const AI_NAMES=["R00T_B0T","SHELL_PHANTOM","BYTE_NINJA","SYS_GHOST","K3RN3L_4CE","NULL_PTR"];
+const AI_CHARS=[
+  {name:"R00T_B0T",    taunts:["nice try","i own this shell","lol slow"],       reactions:{lead:"running circles around you","tie":"keeping pace","behind":"okay you're not bad"}},
+  {name:"SHELL_PHANTOM",taunts:["you can't even ping"],                         reactions:{lead:"touch grass","tie":"interesting","behind":"respect, barely"}},
+  {name:"BYTE_NINJA",   taunts:["skill issue","this is embarrassing","next"],    reactions:{lead:"too easy","tie":"fine, you're decent","behind":"alright you earned it"}},
+  {name:"SYS_GHOST",    taunts:["404: your skills not found","ghost mode on"],   reactions:{lead:"haunting you","tie":"even? interesting","behind":"you got lucky"}},
+  {name:"K3RN3L_4CE",   taunts:["segfault incoming","nice lag","git gud"],       reactions:{lead:"no contest","tie":"0x50/50","behind":"access granted i guess"}},
+  {name:"NULL_PTR",     taunts:["undefined behavior","null reference error lol"],reactions:{lead:"dereferencing your ego","tie":"stack overflow","behind":"unexpected return"}},
+];
+const AI_NAMES=AI_CHARS.map(a=>a.name);
+
+/* ── SUPABASE CONFIG — replace with your own ── */
+const SUPABASE_URL  = "https://cmjeuuaadzexcpnazwlt.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNtamV1dWFhZHpleGNwbmF6d2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMzcwNTAsImV4cCI6MjA4ODcxMzA1MH0.j_eCVEGl-aofueuyIZTZUBrkjBByJF_8xhwOeZmLHqY";
+const SB_CONFIGURED = SUPABASE_URL !== "YOUR_SUPABASE_URL";
+
+async function sbFetchLeaderboard(){
+  if(!SB_CONFIGURED) return [];
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/endless_leaderboard?select=name,score,tasks,created_at&order=score.desc&limit=10`,{
+      headers:{"apikey":SUPABASE_ANON,"Authorization":"Bearer "+SUPABASE_ANON}
+    });
+    if(!r.ok) return [];
+    return await r.json();
+  }catch(e){return [];}
+}
+
+async function sbPostScore(name,score,tasks){
+  if(!SB_CONFIGURED) return;
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/endless_leaderboard`,{
+      method:"POST",
+      headers:{"apikey":SUPABASE_ANON,"Authorization":"Bearer "+SUPABASE_ANON,
+               "Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({name,score,tasks})
+    });
+  }catch(e){}
+}
+
+/* ── SCENARIOS ── */
+const SCENARIOS=[
+  "Underground CTF qualifier. Top score gets the flag.",
+  "Corporate sysadmin job interview. One seat left.",
+  "2AM server breach. You and one other admin. First to respond wins.",
+  "Hackathon finals. Judges are watching.",
+  "Someone bet $20 you couldn't outtype a bot. They were wrong.",
+  "Terminal Olympics. Nation on the line.",
+  "Your pull request is blocked until you prove you know the CLI.",
+  "The data center is on fire. Fastest fingers save the logs.",
+  "Speed run category: any% CLI. World record is watching.",
+  "Tech lead tryouts. The other candidate already started typing.",
+];
 
 /* ── PEER HELPERS ── */
 function genCode(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join("")}
 function getRoomFromURL(){try{return new URLSearchParams(window.location.search).get("room")||""}catch(e){return""}}
 function buildJoinURL(code){try{const u=new URL(window.location.href);u.search="?room="+code;return u.href}catch(e){return"?room="+code}}
 
+/* ── DAILY CHALLENGE ── */
+function getDailySeed(){const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();}
+function seededShuffle(arr,seed){const a=[...arr];let s=seed;for(let i=a.length-1;i>0;i--){s=(s*1664525+1013904223)&0xffffffff;const j=Math.abs(s)%(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function generateDailyTasks(){
+  const seed=getDailySeed();
+  // daily always uses all tiers, fixed count 14
+  const pool=seededShuffle(TASK_POOL,seed);
+  return pool.slice(0,14).map((t,i)=>({...t.fn(),id:i+1}));
+}
+function getDailyKey(){return "tb_daily_"+getDailySeed();}
+
+/* ── ENDLESS TASK GENERATOR ── */
+function getEndlessTier(count){
+  if(count<3)  return 1;
+  if(count<6)  return 2;
+  if(count<10) return 3;
+  return 4;
+}
+/* time reward shrinks as count grows — eventually math works against you */
+function getSurvivalTimeReward(count){
+  // +8s at start, -0.5s every task, floor at 2s
+  // at task 0: 8s, task 5: 5.5s, task 10: 3s, task 12+: 2s
+  return Math.max(2, 8 - count*0.5);
+}
+function generateEndlessTask(count,usedIds){
+  const maxTier=getEndlessTier(count);
+  const pool=TASK_POOL.filter(t=>t.tier<=maxTier&&!usedIds.has(t.fn.toString().slice(0,40)));
+  const available=pool.length>0?pool:TASK_POOL.filter(t=>t.tier<=maxTier);
+  const t=pick(available);
+  return {...t.fn(),id:Date.now()+Math.random()};
+}
+
 /* ── AUDIO ── */
+/* ── RANK SYSTEM ── */
+const RANKS=[
+  {id:"noob",   label:"NOOB",       diff:"noob",  winsNeeded:0,  col:"#4ade80"},
+  {id:"power",  label:"POWER USER", diff:"power", winsNeeded:3,  col:"#60a5fa"},
+  {id:"root",   label:"ROOT",       diff:"root",  winsNeeded:8,  col:"#fb923c"},
+  {id:"god",    label:"GOD MODE",   diff:"god",   winsNeeded:16, col:"#f43f5e"},
+];
+function getRankProgress(){try{return JSON.parse(localStorage.getItem("tb_rank")||'{"wins":0,"rank":"noob"}')}catch(e){return{wins:0,rank:"noob"}}}
+function saveRankProgress(data){try{localStorage.setItem("tb_rank",JSON.stringify(data));}catch(e){}}
+
 function useAudio(sTheme){
   const ctx=useRef(null);
   const get=()=>{if(!ctx.current)ctx.current=new(window.AudioContext||window.webkitAudioContext)();return ctx.current};
@@ -156,8 +270,24 @@ function App(){
   const [countdown,setCountdown]     = useState(null); // null|3|2|1|0
   const [streak,setStreak]           = useState(0);
   const [rematchReq,setRematchReq]   = useState(null); // null|"sent"|"received"|"declined"
-  const [opFlash,setOpFlash]         = useState(false); // flash opponent terminal on their task complete
-  const [particles,setParticles]     = useState([]); // gameover burst chars
+  const [opFlash,setOpFlash]         = useState(false);
+  const [particles,setParticles]     = useState([]);
+  const [aiTaunt,setAiTaunt]         = useState(""); // current AI chat bubble text
+  const [scenario,setScenario]       = useState(""); // narrative framing shown at countdown
+  const [rankData,setRankData]       = useState(()=>getRankProgress());
+  const [isDaily,setIsDaily]         = useState(false);
+  const [dailyDone,setDailyDone]     = useState(()=>{try{return!!localStorage.getItem(getDailyKey());}catch(e){return false;}});
+  const [taskTimer,setTaskTimer]     = useState(null); // seconds left on current task soft timer
+  const [timeBonusTotal,setTimeBonusTotal] = useState(0);
+  const [isEndless,setIsEndless]         = useState(false);
+  const [endlessScore,setEndlessScore]   = useState(0);
+  const [endlessCount,setEndlessCount]   = useState(0); // tasks completed
+  const [endlessTimeLeft,setEndlessTimeLeft] = useState(60);  // survival countdown
+  const [endlessBest,setEndlessBest]     = useState(()=>{try{return parseInt(localStorage.getItem("tb_survival_best")||"0");}catch(e){return 0;}});
+  const [leaderboard,setLeaderboard]     = useState([]);
+  const [lbLoading,setLbLoading]         = useState(false);
+  const [lbPosted,setLbPosted]           = useState(false);
+  const [showLb,setShowLb]               = useState(false);
 
   /* ── Refs (mutable game state) ── */
   const tasksRef       = useRef([]);
@@ -188,12 +318,24 @@ function App(){
   const isMultiRef     = useRef(false);
   const lastTypeSend   = useRef(0);
   const opNameRef      = useRef("Opponent");
+  const playerNameRef  = useRef("Player");
   const opSideRef      = useRef("linux");
   const streakRef      = useRef(0);
   const peakStreakRef  = useRef(0);
   const countdownAfter = useRef(null); // callback to run when countdown hits GO
   const taskLogRef     = useRef([]);   // [{desc,result,timeMs}]
   const gameStartTime  = useRef(0);
+  const aiCharRef      = useRef(AI_CHARS[0]);
+  const tauntTimerRef  = useRef(null);
+  const taskTimerRef   = useRef(null); // interval for soft task timer
+  const taskStartTime  = useRef(0);    // when current task started
+  const timeBonusRef   = useRef(0);    // accumulated time bonuses
+  const isDailyRef     = useRef(false);
+  const isEndlessRef   = useRef(false);
+  const endlessTimerRef= useRef(null); // countdown interval
+  const endlessScoreRef= useRef(0);
+  const endlessCountRef= useRef(0);
+  const survivalTimeRef = useRef(60); // mutable remaining seconds
 
   const {click,success,error,opSuccess} = useAudio(sTheme);
 
@@ -212,6 +354,7 @@ function App(){
   useEffect(()=>{pSideRef.current=pSide;},[pSide]);
   const setSide=useCallback(s=>{pSideRef.current=s;setPSide(s);},[]);
   useEffect(()=>{opNameRef.current=opponentName;},[opponentName]);
+  useEffect(()=>{playerNameRef.current=playerName;},[playerName]);
   useEffect(()=>{opSideRef.current=opponentSide;},[opponentSide]);
 
   /* ── Keyboard input ── */
@@ -390,6 +533,47 @@ function App(){
     }
   },[addLine,clearTerm,success,opSuccess,cleanupPeer,setInput]);
   useEffect(()=>{incomingRef.current=handleIncoming;},[handleIncoming]);
+
+  /* ── AI taunts (solo only) ── */
+  useEffect(()=>{
+    if(phase!=="playing"||isMultiRef.current) return;
+    const fireAiTaunt=()=>{
+      const char=aiCharRef.current;
+      const pAhead=pTaskRef.current>aiTaskRef.current;
+      const behind=aiTaskRef.current>pTaskRef.current+2;
+      let line;
+      if(behind) line=char.reactions.behind;
+      else if(pAhead) line=char.reactions.lead;
+      else if(Math.abs(pTaskRef.current-aiTaskRef.current)<=1) line=char.reactions.tie;
+      else line=pick(char.taunts);
+      setAiTaunt(line);
+      clearTimeout(tauntTimerRef.current);
+      tauntTimerRef.current=setTimeout(()=>setAiTaunt(""),3500);
+    };
+    // fire every 8-14s
+    const sched=()=>{tauntTimerRef.current=setTimeout(()=>{if(!gameActive.current)return;fireAiTaunt();sched();},8000+Math.random()*6000);};
+    sched();
+    return()=>clearTimeout(tauntTimerRef.current);
+  },[phase]);
+
+  /* ── Soft task timer (solo+daily) ── */
+  useEffect(()=>{
+    if(phase!=="playing") return;
+    clearInterval(taskTimerRef.current);
+    taskStartTime.current=Date.now();
+    const TARGET_SECS=20;
+    setTaskTimer(TARGET_SECS);
+    taskTimerRef.current=setInterval(()=>{
+      const elapsed=Math.floor((Date.now()-taskStartTime.current)/1000);
+      const left=Math.max(-9,TARGET_SECS-elapsed);
+      setTaskTimer(left);
+      if(left<0&&gameActive.current){
+        // drain 0.1pt per second over limit (display only — pScoreRef drained on submit)
+      }
+    },500);
+    return()=>clearInterval(taskTimerRef.current);
+  },[pTaskIdx,phase]);
+
 
   /* ── Countdown 3-2-1-GO ── */
   useEffect(()=>{
@@ -570,6 +754,12 @@ function App(){
     pTaskRef.current=0;aiTaskRef.current=0;
     setWinner(null);setRematchReq(null);setAiTyping("");setInput("");setHint(null);
     streakRef.current=0;peakStreakRef.current=0;setStreak(0);
+    timeBonusRef.current=0;setTimeBonusTotal(0);
+    clearInterval(endlessTimerRef.current); isEndlessRef.current=false; setIsEndless(false);
+    const aiChar=AI_CHARS[Math.floor(Math.random()*AI_CHARS.length)];
+    aiCharRef.current=aiChar;
+    setScenario(SCENARIOS[Math.floor(Math.random()*SCENARIOS.length)]);
+    isDailyRef.current=false; setAiTaunt("");
     const iw={prompt:"C:\\Users\\"+name+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:0};
     const il={prompt:name.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:1};
     const pIsW=pSide==="windows";
@@ -578,7 +768,7 @@ function App(){
     const aiIw={prompt:"C:\\Users\\"+AI_NAMES[0]+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:2};
     const aiIl={prompt:"bot@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:3};
     opHistRef.current=[aiIsW?aiIw:aiIl]; setOpHist([aiIsW?aiIw:aiIl]);
-    const newAiName=AI_NAMES[Math.floor(Math.random()*AI_NAMES.length)];
+    const newAiName=aiChar.name;
     aiName.current=newAiName; setOpponentName(newAiName); opNameRef.current=newAiName;
     setOpponentSide(aiIsW?"windows":"linux"); opSideRef.current=aiIsW?"windows":"linux";
     aiScoreRef.current=0;
@@ -586,6 +776,94 @@ function App(){
     countdownAfter.current=()=>setTimeout(()=>scheduleAI(0,aiSide,diff),200);
     setCountdown(3); setPhase("playing");
   },[nameInput,pSide,diff,cleanupPeer,setInput,scheduleAI]);
+
+  /* ── Start Daily Challenge ── */
+  const startDailyGame=useCallback(()=>{
+    const name=nameInput.trim()||"Player"; setPlayerName(name);
+    cleanupPeer(); isMultiRef.current=false;
+    const nt=generateDailyTasks(); tasksRef.current=nt; setTasks(nt);
+    setPScore(0);penaltiesRef.current=0;pScoreRef.current=0;setAiScore(0);setPTaskIdx(0);setAiTaskIdx(0);
+    pTaskRef.current=0;aiTaskRef.current=0;
+    setWinner(null);setRematchReq(null);setAiTyping("");setInput("");setHint(null);
+    streakRef.current=0;peakStreakRef.current=0;setStreak(0);
+    timeBonusRef.current=0;setTimeBonusTotal(0);
+    const aiChar=AI_CHARS[Math.floor(Math.random()*AI_CHARS.length)];
+    aiCharRef.current=aiChar;
+    setScenario("Daily Challenge — same tasks for everyone today. Your score is saved.");
+    isDailyRef.current=true; setIsDaily(true); setAiTaunt("");
+    const pIsW=pSide==="windows";
+    const iw={prompt:"C:\\Users\\"+name+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:0};
+    const il={prompt:name.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:1};
+    pHistRef.current=[pIsW?iw:il]; setPHist([pIsW?iw:il]);
+    const aiIsW=!pIsW;
+    const aiChar2=aiChar;
+    const aiIw={prompt:"C:\\Users\\"+aiChar2.name+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:2};
+    const aiIl={prompt:aiChar2.name.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nWelcome to Terminal Battle. Type fast. Win faster.",id:3};
+    opHistRef.current=[aiIsW?aiIw:aiIl]; setOpHist([aiIsW?aiIw:aiIl]);
+    aiName.current=aiChar2.name; setOpponentName(aiChar2.name); opNameRef.current=aiChar2.name;
+    setOpponentSide(aiIsW?"windows":"linux"); opSideRef.current=aiIsW?"windows":"linux";
+    aiScoreRef.current=0;
+    const aiSide=pIsW?"lin":"win";
+    // daily AI plays at "root" difficulty
+    countdownAfter.current=()=>setTimeout(()=>scheduleAI(0,aiSide,"root"),200);
+    setCountdown(3); setPhase("playing");
+  },[nameInput,pSide,cleanupPeer,setInput,scheduleAI]);
+
+  /* ── Start Endless Mode ── */
+  const startEndlessGame=useCallback(()=>{
+    const name=nameInput.trim()||"Player"; setPlayerName(name); playerNameRef.current=name;
+    cleanupPeer(); isMultiRef.current=false;
+    // start with 5 tasks, we'll add more as player completes them
+    const initial=shuffle(TASK_POOL.filter(t=>t.tier===1)).slice(0,5).map((t,i)=>({...t.fn(),id:i+1}));
+    tasksRef.current=initial; setTasks(initial);
+    setPScore(0);penaltiesRef.current=0;pScoreRef.current=0;setAiScore(0);setPTaskIdx(0);setAiTaskIdx(0);
+    pTaskRef.current=0;aiTaskRef.current=0;
+    setWinner(null);setRematchReq(null);setAiTyping("");setInput("");setHint(null);
+    streakRef.current=0;peakStreakRef.current=0;setStreak(0);
+    timeBonusRef.current=0;setTimeBonusTotal(0);
+    endlessScoreRef.current=0; endlessCountRef.current=0;
+    setEndlessScore(0); setEndlessCount(0); setEndlessTimeLeft(60); survivalTimeRef.current=60;
+    isEndlessRef.current=true; setIsEndless(true);
+    isDailyRef.current=false; setAiTaunt("");
+    setShowLb(false); setLbPosted(false); setLeaderboard([]);
+    setScenario("Survival mode — stay alive by typing fast. Correct = +8s, skip = −5s.");
+    const pIsW=pSide==="windows";
+    const iw={prompt:"C:\\Users\\"+name+">",cmd:"",output:"Microsoft Windows [Version 10.0.22631]\n(c) Microsoft Corporation. All rights reserved.",id:0};
+    const il={prompt:name.toLowerCase()+"@machine:~$",cmd:"",output:"Ubuntu 22.04.3 LTS\nSurvival mode. Type fast. Stay alive.",id:1};
+    pHistRef.current=[pIsW?iw:il]; setPHist([pIsW?iw:il]);
+    // no AI opponent in endless
+    opHistRef.current=[]; setOpHist([]);
+    setOpponentName("--"); setOpponentSide(pIsW?"linux":"windows");
+    aiScoreRef.current=0; taskLogRef.current=[];
+    countdownAfter.current=()=>{
+      gameStartTime.current=Date.now();
+      endlessTimerRef.current=setInterval(()=>{
+        survivalTimeRef.current-=1;
+        const left=survivalTimeRef.current;
+        setEndlessTimeLeft(left);
+        if(left<=0){
+          clearInterval(endlessTimerRef.current);
+          gameActive.current=false;
+          const finalScore=Math.round(Math.max(0,pScoreRef.current)*10)/10;
+          setEndlessBest(prev=>{
+            const nb=Math.max(prev,finalScore);
+            try{localStorage.setItem("tb_survival_best",String(nb));}catch(e){}
+            return nb;
+          });
+          const pName=playerNameRef.current||"Player";
+          const pCount=endlessCountRef.current;
+          setLbPosted(false); setLbLoading(true); setLeaderboard([]);
+          (async()=>{
+            await sbPostScore(pName,finalScore,pCount);
+            const rows=await sbFetchLeaderboard();
+            setLeaderboard(rows); setLbLoading(false); setLbPosted(true);
+          })();
+          setWinner("player"); setPhase("gameover");
+        }
+      },1000);
+    };
+    setCountdown(3); setPhase("playing");
+  },[nameInput,pSide,cleanupPeer,setInput]);
 
   /* ── handleSubmit ── */
   const makeHint=cmd=>{const h=Math.ceil(cmd.length*0.55);return cmd.split("").map((c,i)=>i<h?c:(c===" "?" ":"_")).join("")};
@@ -611,8 +889,17 @@ function App(){
       addLine("player",prompt,"skip",`[SKIP] −1 pt penalty · Score: ${newSkipScore}`);
       setInput("");setHint(null);
       const ni=idx+1; pTaskRef.current=ni; setPTaskIdx(ni);
+      if(isEndlessRef.current){
+        /* −5s on skip */
+        survivalTimeRef.current=Math.max(1,survivalTimeRef.current-5);
+        setEndlessTimeLeft(survivalTimeRef.current);
+        const nextTask=generateEndlessTask(endlessCountRef.current,new Set());
+        const newTasks=[...tasksRef.current,nextTask];
+        tasksRef.current=newTasks; setTasks(newTasks);
+        taskLogRef.current.push({desc:nextTask.desc,result:"pending",timeMs:null});
+      }
       if(isMultiRef.current)netSend({type:"progress",idx:ni,score:Math.max(0,pScoreRef.current)});
-      if(ni>=tasksRef.current.length){
+      if(!isEndlessRef.current&&ni>=tasksRef.current.length){
         gameActive.current=false; clearTimeout(aiTimer.current);
         if(isMultiRef.current)netSend({type:"won",score:newSkipScore});
         setWinner(Math.max(0,pScoreRef.current)>aiScoreRef.current?"player":"ai"); setPhase("gameover");
@@ -643,16 +930,46 @@ function App(){
         const ni=idx+1; pTaskRef.current=ni; setPTaskIdx(ni);
         streakRef.current+=1; if(streakRef.current>peakStreakRef.current)peakStreakRef.current=streakRef.current;
         setStreak(streakRef.current);
-        /* streak bonus: +0.5 every 3rd consecutive correct */
         if(streakRef.current>0&&streakRef.current%3===0) pScoreRef.current+=0.5;
+        /* time bonus: +0.3 if done within 8s, +0.1 if within 15s */
+        const taskElapsed=(Date.now()-taskStartTime.current)/1000;
+        let tBonus=0;
+        if(taskElapsed<=8){tBonus=0.3;}else if(taskElapsed<=15){tBonus=0.1;}
+        if(tBonus>0){pScoreRef.current+=tBonus;timeBonusRef.current+=tBonus;setTimeBonusTotal(timeBonusRef.current);}
+        taskStartTime.current=Date.now();
         pScoreRef.current+=1; const myFinal=Math.max(0,pScoreRef.current); setPScore(myFinal); success();
-        /* log task */
         if(taskLogRef.current[idx])taskLogRef.current[idx]={...taskLogRef.current[idx],result:"done",timeMs:Date.now()-gameStartTime.current};
         if(isMultiRef.current)netSend({type:"progress",idx:ni,score:myFinal});
-        if(ni>=tasksRef.current.length){
+        if(isEndlessRef.current){
+          endlessCountRef.current+=1; endlessScoreRef.current=myFinal;
+          setEndlessCount(endlessCountRef.current);
+          /* +8s per correct, +3s extra on streak bonus */
+          const baseReward=getSurvivalTimeReward(endlessCountRef.current);
+          const streakBonus=(streakRef.current>0&&streakRef.current%3===0)?2:0;
+          const timeAdd=baseReward+streakBonus;
+          survivalTimeRef.current=Math.min(survivalTimeRef.current+timeAdd,300);
+          setEndlessTimeLeft(survivalTimeRef.current);
+          const nextTask=generateEndlessTask(endlessCountRef.current,new Set());
+          const newTasks=[...tasksRef.current,nextTask];
+          tasksRef.current=newTasks; setTasks(newTasks);
+          taskLogRef.current.push({desc:nextTask.desc,result:"pending",timeMs:null});
+        } else if(ni>=tasksRef.current.length){
           gameActive.current=false; clearTimeout(aiTimer.current);
+          clearInterval(endlessTimerRef.current);
           if(isMultiRef.current)netSend({type:"won",score:myFinal});
-          setWinner(myFinal>aiScoreRef.current?"player":"ai"); setPhase("gameover");
+          const didWin=myFinal>aiScoreRef.current;
+          if(!isMultiRef.current&&didWin){
+            const rp=getRankProgress();
+            rp.wins=(rp.wins||0)+1;
+            const nextRank=RANKS.slice().reverse().find(r=>rp.wins>=r.winsNeeded);
+            if(nextRank)rp.rank=nextRank.id;
+            saveRankProgress(rp); setRankData({...rp});
+          }
+          if(isDailyRef.current){
+            try{localStorage.setItem(getDailyKey(),JSON.stringify({score:myFinal,time:Date.now()}));}catch(e){}
+            setDailyDone(true);
+          }
+          setWinner(didWin?"player":"ai"); setPhase("gameover");
         }
         return;
       }
@@ -665,6 +982,10 @@ function App(){
     const errs=pSideRef.current==="windows"?WIN_ERRORS(cmd):LIN_ERRORS(cmd);
     addLine("player",prompt,cmd,errs[Math.floor(Math.random()*errs.length)]);
     streakRef.current=0; setStreak(0);
+    if(isEndlessRef.current){
+      survivalTimeRef.current=Math.max(1,survivalTimeRef.current-3);
+      setEndlessTimeLeft(survivalTimeRef.current);
+    }
     setInput("");error();setShake(true);setTimeout(()=>setShake(false),500);
   },[playerName,addLine,clearTerm,success,error,netSend,setInput]);
   useEffect(()=>{submitRef.current=handleSubmit;},[handleSubmit]);
@@ -852,7 +1173,45 @@ function App(){
           onClick={()=>setPhase("guide")}>
           [ COMMAND GUIDE ]
         </button>
-        <div style={{marginTop:"10px",color:"#2a5a2a",fontSize:"10px",textAlign:"center",letterSpacing:"0.1em"}}>
+        {/* rank progress */}
+        {(()=>{
+          const rp=rankData;
+          const curRankObj=RANKS.find(r=>r.id===rp.rank)||RANKS[0];
+          const nextRankObj=RANKS[RANKS.indexOf(curRankObj)+1];
+          return(
+            <div style={{marginTop:"10px",textAlign:"center"}}>
+              <span style={{fontSize:"10px",color:curRankObj.col,letterSpacing:"0.15em",textShadow:"0 0 8px "+curRankObj.col}}>
+                {curRankObj.label}
+              </span>
+              {nextRankObj&&<span style={{fontSize:"9px",color:"#1a3a1a",marginLeft:"6px"}}>
+                {rp.wins}/{nextRankObj.winsNeeded} wins → {nextRankObj.label}
+              </span>}
+            </div>
+          );
+        })()}
+        {/* daily challenge */}
+        {netMode==="solo"&&(
+          <button style={{width:"100%",padding:"7px",background:dailyDone?"transparent":"#0a0a20",
+            border:"1px solid "+(dailyDone?"#1a2a4a":"#60a5fa"),
+            color:dailyDone?"#1a2a4a":"#60a5fa",fontSize:"11px",letterSpacing:"0.12em",
+            cursor:dailyDone?"default":"pointer",marginTop:"6px",fontFamily:"inherit",
+            textShadow:dailyDone?"none":"0 0 8px #60a5fa40"}}
+            onClick={()=>{if(!dailyDone)startDailyGame();}}>
+            {dailyDone?"[ DAILY DONE ✓ ]":"[ DAILY CHALLENGE ]"}
+          </button>
+        )}
+        {netMode==="solo"&&(
+          <button style={{width:"100%",padding:"7px",background:"#0a0500",
+            border:"1px solid #fb923c",color:"#fb923c",fontSize:"11px",letterSpacing:"0.12em",
+            cursor:"pointer",marginTop:"6px",fontFamily:"inherit",
+            textShadow:"0 0 8px #fb923c40"}}
+            onMouseOver={e=>{e.target.style.background="#180800";}}
+            onMouseOut={e=>{e.target.style.background="#0a0500";}}
+            onClick={startEndlessGame}>
+            [ SURVIVAL {endlessBest>0?"· BEST: "+endlessBest:""} ]
+          </button>
+        )}
+        <div style={{marginTop:"6px",color:"#2a5a2a",fontSize:"10px",textAlign:"center",letterSpacing:"0.1em"}}>
           RACE TO COMPLETE CLI TASKS · HIGHEST SCORE WINS
         </div>
       </>
@@ -905,15 +1264,38 @@ function App(){
         {win:"arp -a",lin:"arp -a",desc:"Show ARP cache — IP to MAC mappings"},
         {win:"route print",lin:"ip route",desc:"Display the IP routing table"},
       ]},
+      {cat:"FILE OPERATIONS (ADVANCED)",items:[
+        {win:"dir /a /b dir",lin:"ls -la dir/",desc:"List files in a folder with full details"},
+        {win:"more +20 file",lin:"tail -n 20 file",desc:"Show last 20 lines of a file"},
+        {win:'find /c /v "" file',lin:"wc -l file",desc:"Count lines in a file"},
+        {win:"sort file",lin:"sort file",desc:"Sort file contents alphabetically"},
+        {win:"xcopy src dst /E /I",lin:"cp -r src dst",desc:"Recursively copy a directory"},
+        {win:"du /s dir",lin:"du -sh dir/",desc:"Show total disk usage of a folder"},
+        {win:"tar -czf file.tar.gz dir",lin:"tar -czf file.tar.gz dir",desc:"Archive a directory into a .tar.gz file"},
+        {win:"tar -xzf file.tar.gz",lin:"tar -xzf file.tar.gz",desc:"Extract a .tar.gz archive"},
+        {win:"icacls file /grant Everyone:(RX)",lin:"chmod 755 file",desc:"Set file permissions to 755"},
+        {win:"takeown /f file",lin:"chown root:root file",desc:"Change file owner to root"},
+      ]},
       {cat:"SEARCH & COMPARE",items:[
         {win:'findstr "kw" file',lin:'grep "kw" file',desc:"Search for a keyword inside a file"},
+        {win:'findstr /s /r "kw" dir\\*',lin:'grep -r "kw" dir/',desc:"Recursively search keyword across all files in a folder"},
+        {win:'findstr /c:"kw" file | find /c /v ""',lin:'grep -c "kw" file',desc:"Count occurrences of a keyword in a file"},
         {win:"fc file1 file2",lin:"diff file1 file2",desc:"Compare two files line by line"},
+        {win:"forfiles /p dir /s /m *.log /d -7",lin:'find dir -name "*.log" -mtime -7',desc:"Find .log files modified in the last 7 days"},
       ]},
       {cat:"PROCESSES & NETWORK",items:[
+        {win:"tasklist /FI \"IMAGENAME eq app.exe\"",lin:"pgrep app",desc:"Show process ID of a running app"},
         {win:"taskkill /IM app.exe",lin:"pkill app",desc:"Terminate a running process by name"},
+        {win:"taskkill /F /IM app.exe /T",lin:"pkill -9 app",desc:"Force-kill a process and all its children"},
         {win:"ping domain.com",lin:"ping domain.com",desc:"Test connectivity to a host"},
         {win:"tracert domain.com",lin:"traceroute domain.com",desc:"Trace network hops to a host"},
         {win:"nslookup domain.com",lin:"dig domain.com",desc:"Query DNS records for a domain"},
+        {win:"netstat -an | findstr :443",lin:"ss -tlnp | grep :443",desc:"Show what is listening on port 443"},
+      ]},
+      {cat:"REMOTE & TRANSFER",items:[
+        {win:"pscp file user@ip:/home/user/",lin:"scp file user@ip:/home/user/",desc:"Copy a file to a remote server via SSH"},
+        {win:"curl -O https://domain.com/file",lin:"curl -O https://domain.com/file",desc:"Download a file from a URL"},
+        {win:'curl -X POST https://domain/api -H "Content-Type: application/json" -d "{}\"',lin:'curl -X POST https://domain/api -H "Content-Type: application/json" -d \'{}\'',desc:"Send a POST request with JSON data"},
       ]},
     ];
     const thGreen="#00ff41"; const dimGreen="#1a4a1a"; const midGreen="#2a6a2a";
@@ -1037,6 +1419,7 @@ function App(){
   if(phase==="gameover"){
     const isDisconn=winner==="disconnect";
     const won=winner==="player";
+    const endlessFinished=isEndless&&!isDisconn;
     const col=isRetro?(won?"#000080":"#cc0000"):(won?"#00ff41":"#f43f5e");
     /* particle burst chars */
     const BURST_CHARS="01><$#@!%&*[]{}|/\\~^";
@@ -1066,14 +1449,14 @@ function App(){
             {isRetro&&<WinChrome label="⊞ Battle Result" onClose={()=>{}}/>}
             <div style={{padding:isRetro?"16px 0 0 0":"0"}}>
               <div style={{fontSize:isRetro?"12px":"10px",letterSpacing:"0.2em",color:col,marginBottom:"10px"}}>
-                {isDisconn?"BATTLE ENDED":"BATTLE COMPLETE"}
+                {isDisconn?"BATTLE ENDED":endlessFinished?"SURVIVAL COMPLETE":"BATTLE COMPLETE"}
               </div>
               {/* main title with glitch layers */}
               <div style={{position:"relative",marginBottom:"8px",display:"inline-block"}}>
                 <div style={{fontSize:isRetro?"26px":"32px",fontWeight:"bold",color:col,
                   textShadow:isRetro?"none":(won?"0 0 30px "+col+",0 0 60px "+col+"60":"0 0 20px "+col),
                   animation:won?"victpulse 2s ease-in-out infinite":"flash 1.2s ease-in-out infinite"}}>
-                  {isDisconn?"DISCONNECTED":won?"VICTORY":"DEFEATED"}
+                  {isDisconn?"DISCONNECTED":endlessFinished?"TIME'S UP":won?"VICTORY":"DEFEATED"}
                 </div>
                 {!isRetro&&!won&&!isDisconn&&<>
                   <div style={{position:"absolute",inset:0,fontSize:"32px",fontWeight:"bold",
@@ -1086,21 +1469,92 @@ function App(){
               {isDisconn&&<div style={{fontSize:"12px",color:isRetro?"#404040":"#555",marginBottom:"16px"}}>Opponent disconnected.</div>}
               {!isDisconn&&<>
                 <div style={{fontSize:isRetro?"12px":"13px",color:isRetro?"#404040":"#555",marginBottom:"24px"}}>
-                  {won?`${playerName} wins with ${fmt(pScore)} pts`:`${opponentName} scored ${fmt(aiScore)} · You scored ${fmt(pScore)}`}
+                  {endlessFinished
+                  ?`${endlessCount} tasks · score ${fmt(pScore)}${endlessBest>=pScore?" · best: "+fmt(endlessBest):" · NEW BEST!"}`
+                  :won?`${playerName} wins with ${fmt(pScore)} pts`:`${opponentName} scored ${fmt(aiScore)} · You scored ${fmt(pScore)}`
+                }
+                {!isMultiRef.current&&!endlessFinished&&timeBonusTotal>0&&<span style={{fontSize:"10px",color:"#60a5fa",marginLeft:"6px"}}>+{fmt(timeBonusTotal)} time bonus</span>}
                 </div>
-                <div style={{display:"flex",justifyContent:"center",gap:"30px",marginBottom:"28px"}}>
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:"10px",color:isRetro?"#000080":"#aaa",letterSpacing:"0.1em"}}>{playerName}</div>
-                    <div style={{fontSize:"28px",color:isRetro?(won?"#000080":"#800000"):(pSide==="linux"?linGlow:winGlow)}}>{fmt(pScore)}</div>
+                {endlessFinished?(
+                  <div style={{textAlign:"center",marginBottom:"28px"}}>
+                    <div style={{fontSize:"11px",color:"#555",marginBottom:"4px",letterSpacing:"0.1em"}}>SCORE</div>
+                    <div style={{fontSize:"48px",fontWeight:"bold",color:pScore>endlessBest?"#fb923c":(pSide==="linux"?linGlow:winGlow),
+                      textShadow:"0 0 20px currentColor"}}>{(Math.round(pScore*10)/10).toFixed(1)}</div>
+                    {pScore>endlessBest&&<div style={{fontSize:"10px",color:"#fb923c",letterSpacing:"0.2em",animation:"spulse 1s infinite"}}>NEW BEST</div>}
+                    {endlessBest>0&&pScore<=endlessBest&&<div style={{fontSize:"10px",color:"#555",marginTop:"4px"}}>best: {fmt(endlessBest)}</div>}
                   </div>
-                  <div style={{fontSize:"24px",color:isRetro?"#606060":"#3a6a3a",paddingTop:"8px"}}>vs</div>
-                  <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:"10px",color:isRetro?"#000080":"#aaa",letterSpacing:"0.1em"}}>{opponentName}</div>
-                    <div style={{fontSize:"28px",color:isRetro?(!won?"#000080":"#800000"):(opponentSide==="linux"?linGlow:winGlow)}}>{fmt(aiScore)}</div>
+                ):(
+                  <div style={{display:"flex",justifyContent:"center",gap:"30px",marginBottom:"28px"}}>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontSize:"10px",color:isRetro?"#000080":"#aaa",letterSpacing:"0.1em"}}>{playerName}</div>
+                      <div style={{fontSize:"28px",color:isRetro?(won?"#000080":"#800000"):(pSide==="linux"?linGlow:winGlow)}}>{fmt(pScore)}</div>
+                    </div>
+                    <div style={{fontSize:"24px",color:isRetro?"#606060":"#3a6a3a",paddingTop:"8px"}}>vs</div>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontSize:"10px",color:isRetro?"#000080":"#aaa",letterSpacing:"0.1em"}}>{opponentName}</div>
+                      <div style={{fontSize:"28px",color:isRetro?(!won?"#000080":"#800000"):(opponentSide==="linux"?linGlow:winGlow)}}>{fmt(aiScore)}</div>
+                    </div>
                   </div>
-                </div>
+                )}
               </>}
               {/* ── Post-game breakdown ── */}
+              {/* endless leaderboard */}
+              {endlessFinished&&SB_CONFIGURED&&(
+                <div style={{marginBottom:"20px",textAlign:"left"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"}}>
+                    <div style={{fontSize:"10px",letterSpacing:"0.15em",color:"#fb923c"}}>LEADERBOARD</div>
+                    {!showLb&&!lbLoading&&leaderboard.length>0&&(
+                      <button onClick={()=>setShowLb(true)}
+                        style={{background:"transparent",border:"1px solid #fb923c40",color:"#fb923c",fontSize:"9px",
+                          letterSpacing:"0.1em",padding:"2px 8px",cursor:"pointer",fontFamily:"inherit"}}>
+                        SHOW
+                      </button>
+                    )}
+                    {showLb&&<button onClick={()=>setShowLb(false)}
+                      style={{background:"transparent",border:"1px solid #fb923c40",color:"#fb923c60",fontSize:"9px",
+                        letterSpacing:"0.1em",padding:"2px 8px",cursor:"pointer",fontFamily:"inherit"}}>
+                      HIDE
+                    </button>}
+                  </div>
+                  {lbLoading&&<div style={{fontSize:"10px",color:"#555",letterSpacing:"0.1em"}}>posting score...</div>}
+                  {!lbLoading&&!SB_CONFIGURED&&<div style={{fontSize:"10px",color:"#555"}}>configure Supabase to enable leaderboard</div>}
+                  {showLb&&leaderboard.length>0&&(
+                    <div style={{maxHeight:"160px",overflowY:"auto"}}>
+                      {leaderboard.map((row,i)=>{
+                        const isMe=row.name===(playerName||"Player")&&row.score===pScore;
+                        return(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:"8px",
+                            padding:"3px 6px",marginBottom:"2px",borderRadius:"2px",
+                            background:isMe?"#181000":"transparent",
+                            border:isMe?"1px solid #fb923c30":"1px solid transparent"}}>
+                            <span style={{fontSize:"9px",color:i===0?"#fb923c":i===1?"#888":i===2?"#7a5c00":"#333",
+                              minWidth:"14px",textAlign:"right"}}>{i+1}</span>
+                            <span style={{fontSize:"10px",color:isMe?"#fb923c":"#aaa",flex:1,
+                              overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.name}</span>
+                            <span style={{fontSize:"10px",color:isMe?"#fb923c":"#666",minWidth:"28px",textAlign:"right"}}>{row.score}</span>
+                            <span style={{fontSize:"9px",color:"#333",minWidth:"40px",textAlign:"right"}}>{row.tasks}t</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {showLb&&leaderboard.length===0&&!lbLoading&&<div style={{fontSize:"10px",color:"#555"}}>no scores yet</div>}
+                </div>
+              )}
+              {/* rank up notification */}
+              {!isMultiRef.current&&(()=>{
+                const rp=rankData;
+                const curR=RANKS.find(r=>r.id===rp.rank)||RANKS[0];
+                const idx=RANKS.indexOf(curR);
+                const prev=RANKS[idx-1];
+                const justUnlocked=prev&&rp.wins===curR.winsNeeded;
+                return justUnlocked?(
+                  <div style={{fontSize:isRetro?"13px":"11px",color:curR.col,letterSpacing:"0.15em",
+                    textShadow:"0 0 12px "+curR.col,marginBottom:"10px",animation:"spulse 1s infinite"}}>
+                    ↑ RANK UP: {curR.label}
+                  </div>
+                ):null;
+              })()}
               {!isDisconn&&taskLogRef.current.length>0&&(
                 <div style={{margin:"12px 0 16px 0",maxHeight:"160px",overflowY:"auto",borderTop:"1px solid #1a2a1a",paddingTop:"8px"}}>
                   <div style={{fontSize:isRetro?"10px":"9px",letterSpacing:"0.1em",color:isRetro?"#000080":"#555",marginBottom:"4px"}}>TASK BREAKDOWN</div>
@@ -1135,7 +1589,7 @@ function App(){
                   {rematchReq==="declined"&&<div style={{fontSize:"9px",color:isRetro?"#cc0000":"#f43f5e",letterSpacing:"0.1em",marginBottom:"4px"}}>Rematch declined.</div>}
                   <div style={{display:"flex",gap:"8px"}}>
                     <button style={{...S.startBtn,width:"auto",padding:isRetro?"5px 22px":"8px 28px"}}
-                      onClick={()=>{gameActive.current=false;clearTimeout(aiTimer.current);cleanupPeer();isMultiRef.current=false;setRematchReq(null);setPhase("login");setLobbyStatus("idle");setConnStatus("");}}>
+                      onClick={()=>{gameActive.current=false;clearTimeout(aiTimer.current);clearInterval(endlessTimerRef.current);cleanupPeer();isMultiRef.current=false;isEndlessRef.current=false;setIsEndless(false);setRematchReq(null);setPhase("login");setLobbyStatus("idle");setConnStatus("");}}>
                       {isRetro?"[ Menu ]":"MENU"}
                     </button>
                     {isMultiRef.current&&rematchReq!=="sent"&&(
@@ -1146,8 +1600,9 @@ function App(){
                     )}
                     {!isMultiRef.current&&(
                       <button style={{...S.btn(false,isRetro?"x":"#60a5fa"),padding:isRetro?"5px 22px":"8px 28px",fontSize:isRetro?"13px":"11px"}}
-                        onClick={()=>{gameActive.current=false;clearTimeout(aiTimer.current);startSoloGame();}}>
-                        {isRetro?"[ Rematch ]":"REMATCH"}
+                        onClick={()=>{gameActive.current=false;clearTimeout(aiTimer.current);clearInterval(endlessTimerRef.current);
+                          if(endlessFinished)startEndlessGame();else startSoloGame();}}>
+                        {endlessFinished?(isRetro?"[ Again ]":"AGAIN"):(isRetro?"[ Rematch ]":"REMATCH")}
                       </button>
                     )}
                   </div>
@@ -1173,10 +1628,18 @@ function App(){
         <div style={S.logo}>
           {isRetro?<span>WIN ⚔ LIN</span>:<><span style={{color:winGlow,textShadow:"0 0 6px "+winGlow}}>WIN</span><span style={{color:"#1a3a1a",margin:"0 8px"}}>⚔</span><span style={{color:linGlow,textShadow:"0 0 10px "+linGlow}}>LIN</span></>}
         </div>
-        <div style={S.badge(opponentSide==="linux"?linGlow:winGlow)}>
-          {opponentName} · {aiScore}/{tasks.length}
-          {isMultiRef.current&&<span style={{fontSize:"9px",opacity:0.6,marginLeft:"4px"}}>🌐</span>}
-        </div>
+        {isEndless?(
+          <div style={{...S.badge(endlessTimeLeft<=10?"#f43f5e":endlessTimeLeft<=20?"#fb923c":"#60a5fa"),
+            fontSize:"13px",fontWeight:"bold",minWidth:"120px"}}>
+            {Math.floor(endlessTimeLeft/60)}:{String(endlessTimeLeft%60).padStart(2,"0")}
+            <span style={{fontSize:"9px",marginLeft:"4px",opacity:0.7}}>LEFT</span>
+          </div>
+        ):(
+          <div style={S.badge(opponentSide==="linux"?linGlow:winGlow)}>
+            {opponentName} · {aiScore}/{tasks.length}
+            {isMultiRef.current&&<span style={{fontSize:"9px",opacity:0.6,marginLeft:"4px"}}>🌐</span>}
+          </div>
+        )}
       </div>
       {/* PANELS */}
       <div style={S.panels}>
@@ -1187,8 +1650,8 @@ function App(){
           const pc=isW?(isRetro?"#c0c0c0":"#909090"):(isRetro?"#00cc00":"#00cc33");
           const cc=isW?(isRetro?"#fff":"#e0e0e0"):(isRetro?"#00ff00":"#00ff41");
           return(
-            <div style={S.tWrap(gl)}>
-              {isRetro?<WinChrome label={isW?"⊞  C:\\> — YOU":"$  bash — YOU"}/>:<div style={S.tHdr(gl)}>{isW?"⊞ WINDOWS CMD":"$ LINUX BASH"} · YOU</div>}
+            <div style={{...S.tWrap(gl),flex:isEndless?"1":"0 0 calc(35% - 3px)"}}>
+              {isRetro?<WinChrome label={isW?"⊞  C:\\> — YOU":"$  bash — YOU"}/>:<div style={S.tHdr(gl)}>{isW?"⊞ WINDOWS CMD":"$ LINUX BASH"} · {isEndless?"SURVIVAL":"YOU"}</div>}
               <div style={S.tBody} ref={pTermRef}>
                 {renderHist(pHist,pc,cc)}
                 {(()=>{const before=pInput.slice(0,cursorPos);const after=pInput.slice(cursorPos);return(<div><span style={{color:pc}}>{pPrompt} </span><span style={{color:cc}}>{before}</span><span style={S.cur(gl)}/><span style={{color:cc}}>{after}</span></div>);})()}
@@ -1198,7 +1661,11 @@ function App(){
         })()}
         {/* MIDDLE */}
         <div style={S.mWrap}>
-          {isRetro?<WinChrome label="📋  Tasks"/>:<div style={S.mTitle}>TASKS</div>}
+          {isRetro?<WinChrome label="📋  Tasks"/>:(
+            <div style={S.mTitle}>
+              {isEndless?`SURVIVAL · T${getEndlessTier(endlessCount)} · ${endlessCount} done`:"TASKS"}
+            </div>
+          )}
           <div style={{flex:1,overflowY:"auto",padding:"4px",background:isRetro?"#c0c0c0":"transparent"}}>
             {tasks.map((t,i)=>{
               const st=getState(i,pTaskIdx,aiTaskIdx);
@@ -1210,24 +1677,47 @@ function App(){
             <div style={{fontSize:isRetro?"12px":"10.5px",color:isRetro?"#000080":"#60a5fa",textShadow:isRetro?"none":"0 0 6px #3b82f660",marginBottom:hint?"4px":"0"}}>
               {pTaskIdx<tasks.length?tasks[pTaskIdx].desc:"ALL DONE!"}
             </div>
+            {/* soft task timer */}
+            {taskTimer!==null&&!isMultiRef.current&&(
+              <div style={{display:"flex",alignItems:"center",gap:"4px",marginBottom:"2px"}}>
+                <div style={{flex:1,height:"2px",background:"#0d1a0d",borderRadius:"1px"}}>
+                  <div style={{height:"2px",borderRadius:"1px",width:Math.max(0,Math.min(100,(taskTimer/20)*100))+"%",
+                    background:taskTimer>10?"#4ade80":taskTimer>5?"#fb923c":"#f43f5e",
+                    transition:"width 0.5s linear,background 0.3s"}}></div>
+                </div>
+                <span style={{fontSize:"9px",color:taskTimer>10?"#2a5a2a":taskTimer>5?"#fb923c80":"#f43f5e80",minWidth:"18px",textAlign:"right"}}>
+                  {taskTimer>0?taskTimer+"s":"over"}
+                </span>
+              </div>
+            )}
             {hint&&<div style={{fontSize:isRetro?"11px":"10px",color:isRetro?"#804000":"#fb923c",letterSpacing:"0.05em"}}>⚑ {hint}</div>}
             <div style={{display:"flex",gap:"8px",marginTop:"4px",fontSize:isRetro?"10px":"9px",color:isRetro?"#808080":"#1a3a1a"}}>
               <span style={{color:isRetro?"#804000":"#fb923ca0"}}>skip</span><span>−1pt</span><span>·</span>
               <span style={{color:isRetro?"#804000":"#fb923ca0"}}>help</span><span>−0.5pt</span>
             </div>
+            {isEndless&&!isRetro&&(
+              <div style={{fontSize:"9px",color:endlessTimeLeft<=10?"#f43f5e":endlessTimeLeft<=20?"#fb923c":"#4ade8060",marginTop:"4px",letterSpacing:"0.08em"}}>
+                correct: +{getSurvivalTimeReward(endlessCount).toFixed(1)}s · skip: −5s · wrong: −3s
+              </div>
+            )}
             {streak>=2&&<div style={{marginTop:"4px",fontSize:isRetro?"11px":"9px",color:isRetro?"#804000":"#fb923c",animation:"spulse 1.2s ease-in-out infinite",letterSpacing:"0.08em"}}>🔥 {streak}x STREAK{streak>=3?" +bonus":""}</div>}
           </div>
         </div>
-        {/* OPPONENT — always RIGHT, styled by their chosen side */}
-        {(()=>{
+        {/* OPPONENT — always RIGHT, hidden in endless */}
+        {!isEndless&&(()=>{
           const isW=opponentSide==="windows";
           const gl=isW?winGlow:linGlow;
           const pc=isW?(isRetro?"#c0c0c0":"#909090"):(isRetro?"#00cc00":"#00cc33");
           const cc=isW?(isRetro?"#fff":"#e0e0e0"):(isRetro?"#00ff00":"#00ff41");
           return(
-            <div style={{...S.tWrap(gl),animation:opFlash?"opflash 0.6s ease-out":"none"}}>
+            <div style={{...S.tWrap(gl),animation:opFlash?"opflash 0.6s ease-out":"none",position:"relative"}}>
               {isRetro?<WinChrome label={(isW?"⊞  C:\\> — ":"$  bash — ")+opponentName+(isMultiRef.current?" 🌐":"")}/>
                       :<div style={S.tHdr(gl)}>{isW?"⊞ WINDOWS CMD":"$ LINUX BASH"} · {opponentName}{isMultiRef.current?" 🌐":""}</div>}
+              {aiTaunt&&!isMultiRef.current&&(
+                <div style={{position:"absolute",top:"28px",right:"8px",background:"#111",border:"1px solid #f43f5e60",color:"#f43f5e",fontSize:"9px",padding:"3px 7px",borderRadius:"2px",zIndex:10,maxWidth:"120px",textAlign:"right",letterSpacing:"0.05em",boxShadow:"0 0 10px #f43f5e20",animation:"goshow 0.2s ease-out",pointerEvents:"none"}}>
+                  {aiTaunt}
+                </div>
+              )}
               <div style={S.tBody} ref={opTermRef}>
                 {renderHist(opHist,pc,cc)}
                 <div><span style={{color:pc}}>{opPrompt} </span><span style={{color:cc}}>{aiTyping}</span><span style={S.cur(gl)}/></div>
@@ -1250,7 +1740,8 @@ function App(){
               GO!
             </div>
           )}
-          <div style={{fontSize:"12px",color:"#ffffff40",marginTop:"16px",letterSpacing:"0.3em"}}>GET READY</div>
+          {scenario&&<div style={{fontSize:"11px",color:"#ffffff60",marginTop:"16px",maxWidth:"360px",textAlign:"center",fontStyle:"italic",letterSpacing:"0.05em",lineHeight:"1.5"}}>{scenario}</div>}
+          {!scenario&&<div style={{fontSize:"12px",color:"#ffffff40",marginTop:"16px",letterSpacing:"0.3em"}}>GET READY</div>}
         </div>
       )}
     </div>
